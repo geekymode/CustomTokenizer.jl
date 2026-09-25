@@ -52,6 +52,25 @@ function corpus_pairs(sentences, vocab::Vocabulary; window::Integer = 2)
 end
 
 """
+    corpus_pairs(id_sentences; window=2) -> Vector{Tuple{Int,Int}}
+
+Pairs from sentences that are already ids, as produced by [`subsample`](@ref).
+Ids of 0 or less are treated as gaps: they separate their neighbours without
+pairing with anything.
+"""
+function corpus_pairs(id_sentences::AbstractVector{<:AbstractVector{<:Integer}};
+                      window::Integer = 2)
+    out = Tuple{Int,Int}[]
+    for s in id_sentences
+        for (c, o) in context_pairs(collect(Int, s), window)
+            (c <= 0 || o <= 0) && continue
+            push!(out, (c, o))
+        end
+    end
+    out
+end
+
+"""
     cooccurrence(pairs, V) -> Matrix{Int}
     cooccurrence(sentences, vocab; window=2) -> Matrix{Int}
 

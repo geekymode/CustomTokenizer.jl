@@ -324,6 +324,14 @@ end
     ids = subsample(SENTENCES, VOCAB, aggressive, Xoshiro(4))
     @test all(s -> all(i -> 1 <= i <= 22, s), ids)
     @test sum(length, ids) < 62              # some tokens were dropped
+
+    # a subsampled id stream can go straight into corpus_pairs
+    p_ids = corpus_pairs(ids; window = 2)
+    @test all(t -> 1 <= t[1] <= 22 && 1 <= t[2] <= 22, p_ids)
+    @test length(p_ids) < length(PAIRS)
+    # the two corpus_pairs methods agree when nothing is dropped
+    full = [[VOCAB[w] for w in s] for s in SENTENCES]
+    @test corpus_pairs(full; window = 2) == PAIRS
 end
 
 @testset "a second, larger corpus" begin
