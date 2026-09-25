@@ -1,0 +1,8 @@
+text	bytes	words	GPT-3	GPT-3.5/4	GPT-4o	Gemma 4	Gemma 2	Qwen 2.5	CustomTokenizer.jl
+english	64	13	14	14	14	15	15	14	13
+german	64	10	26	20	15	16	14	19	13
+hindi	149	12	91	58	20	19	23	53	0
+chinese	57	1	39	31	19	16	16	14	0
+code	92	17	50	31	31	36	36	31	15
+numbers	64	12	24	27	27	39	39	38	8
+emoji	59	11	19	19	18	18	18	19	9

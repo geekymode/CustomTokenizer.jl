@@ -1,0 +1,7 @@
+tokenizer	vocab
+GPT-3	50257
+GPT-3.5/4	100277
+GPT-4o	200019
+Gemma 4	262144
+Gemma 2	256000
+Qwen 2.5	151665
