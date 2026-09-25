@@ -167,6 +167,24 @@ train!(model, corpus_pairs(sentences, vocab; window = 2); epochs = 300)
 similarity(model, "king", "queen")     # ≈ 1.0 if everything is working
 ```
 
+## Examples
+
+Every script, with the command that runs it, is catalogued at
+<https://geekymode.github.io/CustomTokenizer.jl/dev/examples/>. In short:
+
+```
+julia --project=. examples/walkthrough.jl            # the toy corpus, start to finish
+julia --project=. -i examples/stepping.jl            # one update at a time
+julia --project=docs examples/figures.jl             # write all nine figures
+julia --project=. examples/analogies.jl ../text8 17000000   # train, then ask analogies
+
+python experiments/tokenizer_zoo.py                  # GPT-3/4o/Gemma/Qwen side by side
+python experiments/analogy_tokens.py                 # are the analogy words single tokens?
+python experiments/fetch_pretrained.py               # download GloVe
+python experiments/extract_llm_embeddings.py         # pull an LLM's embedding table
+julia --project=. examples/compare_llm_embeddings.jl # compare all of them
+```
+
 ## Documentation
 
 **<https://geekymode.github.io/CustomTokenizer.jl/dev/>**, rebuilt on every push.

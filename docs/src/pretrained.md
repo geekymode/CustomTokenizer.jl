@@ -70,6 +70,53 @@ text8 this package gets 7 of 12 at rank 1:
 julia --project=. examples/analogies.jl ../text8 17000000
 ```
 
+## An LLM's own input embeddings
+
+A tokenizer has no vectors, so an analogy cannot be computed *in* one. The
+model behind it does have vectors: the first thing a transformer does is look
+up a row of its embedding table for each token id. Those rows can be extracted
+and compared like any others.
+
+```
+python experiments/extract_llm_embeddings.py                      # Gemma 3 270M
+python experiments/extract_llm_embeddings.py --repo Qwen/Qwen2.5-0.5B
+```
+
+The script downloads the checkpoint, reads the embedding tensor with a small
+safetensors reader (no torch required, bfloat16 handled), keeps the rows whose
+token is a whole word — `▁queen` becomes `queen`, while pieces like `ization`
+are skipped — and writes a `.vec` file. Then:
+
+```julia
+llm = load_vectors("experiments/results/gemma-3-270m-embeddings.vec"; name = "Gemma 3 270M")
+
+analogy(llm, "man", "king", "woman")
+analogy_accuracy(llm)
+neighbour_overlap(llm, glove, shared_vocabulary(llm, glove)[1:300]; k = 10)
+```
+
+`examples/compare_llm_embeddings.jl` does all of that for whichever vector
+files it finds, and prints a per-question table of where the models disagree.
+
+Worth setting expectations before running it: an LLM's input embeddings are not
+trained to be good standalone word vectors. They feed a stack that adds context
+at every layer, so a word's meaning in that model is spread across the network
+rather than living in its row. They usually score *worse* on analogies than
+GloVe, which is trained for exactly this task — that is information about what
+the row does, not a defect.
+
+Which words are single tokens matters here, and differs by model:
+
+| question | GPT-3 | GPT-4o | Gemma 4 | Gemma 2 |
+|---|---|---|---|---|
+| man/king/woman/queen | yes | yes | yes | yes |
+| france/paris/italy/rome | no | no | yes | yes |
+| germany/berlin/japan/tokyo | no | no | no | yes |
+
+GPT-3 splits `paris` into `par|is` and `rome` into `r|ome`, so a model on that
+tokenizer has no single row for either. `python experiments/analogy_tokens.py`
+prints the full table.
+
 ## Comparing two models
 
 Two embeddings live in unrelated coordinate systems, so the comparisons are

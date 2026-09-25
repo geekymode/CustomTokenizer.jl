@@ -146,6 +146,8 @@ similarity(model, "king", "queen")     # ≈ 1.0 if everything is working
   tables change.
 * [Reading the plots](plots.md) — what each figure shows.
 * [Scaling up](scaling.md) — what changes on a real corpus.
+* [Examples](examples.md) — every script in the repository, with the command
+  that runs it and what it prints.
 * [Published vectors and analogies](pretrained.md) — load GloVe, ask
   "man is to king as woman is to ?", and compare a model you trained against
   one you downloaded.

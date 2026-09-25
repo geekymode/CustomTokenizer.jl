@@ -23,6 +23,7 @@ makedocs(
         "Stepping through it" => "stepping.md",
         "Reading the plots"   => "plots.md",
         "Scaling up"          => "scaling.md",
+        "Examples"            => "examples.md",
         "Published vectors"   => "pretrained.md",
         "Tokenizer experiments" => "tokenizers.md",
         "API reference"       => "api.md",
