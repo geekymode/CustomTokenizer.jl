@@ -52,6 +52,8 @@ train!(model, pairs; epochs = 300)
 | training | [`update_pair!`](@ref), [`train!`](@ref), [`learning_rate`](@ref), [`TrainLog`](@ref), [`evaluate_loss`](@ref) |
 | stepping | [`TrainStepper`](@ref), [`step!`](@ref), [`run_updates!`](@ref), [`finish_epoch!`](@ref), [`reset!`](@ref), [`progress`](@ref) |
 | analysis | [`target_probability`](@ref), [`target_matrix`](@ref), [`calibration`](@ref), [`similarity_matrix`](@ref), [`pca2`](@ref), [`neighbour_ranking`](@ref), [`ranking_churn`](@ref) |
+| embeddings | [`Embedding`](@ref), [`embedding`](@ref), [`load_vectors`](@ref), [`save_vectors`](@ref) |
+| comparing | [`shared_vocabulary`](@ref), [`neighbour_overlap`](@ref), [`similarity_agreement`](@ref), [`analogy_accuracy`](@ref) |
 | plots | [`plot_tables`](@ref), [`plot_update`](@ref), [`plot_loss`](@ref), [`plot_similarity_matrix`](@ref), [`plot_cooccurrence`](@ref), [`plot_embedding_map`](@ref), [`plot_evolution`](@ref) |
 
 Plotting lives in a package extension: the core package has no dependencies
@@ -75,3 +77,8 @@ Pkg.add("CairoMakie")      # optional, for the figures
   tables change.
 * [Reading the plots](plots.md) — what each figure shows.
 * [Scaling up](scaling.md) — what changes on a real corpus.
+* [Published vectors and analogies](pretrained.md) — load GloVe, ask
+  "man is to king as woman is to ?", and compare a model you trained against
+  one you downloaded.
+* [Tokenizer experiments](tokenizers.md) — how GPT-3, GPT-4o and Gemma 4 cut
+  the same text up, and whether the choice changes the vectors.

@@ -23,6 +23,8 @@ makedocs(
         "Stepping through it" => "stepping.md",
         "Reading the plots"   => "plots.md",
         "Scaling up"          => "scaling.md",
+        "Published vectors"   => "pretrained.md",
+        "Tokenizer experiments" => "tokenizers.md",
         "API reference"       => "api.md",
     ],
     checkdocs = :exports,

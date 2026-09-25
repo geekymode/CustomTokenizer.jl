@@ -53,6 +53,26 @@ analogy
 column_norms
 ```
 
+## Embeddings: trained here or loaded from a file
+
+```@docs
+AbstractEmbedding
+Embedding
+embedding
+load_vectors
+save_vectors
+```
+
+## Comparing two embeddings
+
+```@docs
+shared_vocabulary
+neighbour_overlap
+similarity_agreement
+analogy_accuracy
+ANALOGY_QUESTIONS
+```
+
 ## Negative sampling
 
 ```@docs
