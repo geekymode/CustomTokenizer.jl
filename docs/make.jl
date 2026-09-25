@@ -9,7 +9,7 @@ DocMeta.setdocmeta!(CustomTokenizer, :DocTestSetup,
 
 makedocs(
     sitename = "CustomTokenizer.jl",
-    repo     = Remotes.GitHub("geekymode", "-CustomTokenizer"),
+    repo     = Remotes.GitHub("geekymode", "CustomTokenizer"),
     authors  = "word2vec-demo",
     modules  = [CustomTokenizer],
     format   = Documenter.HTML(
@@ -31,7 +31,7 @@ makedocs(
 )
 
 deploydocs(
-    repo       = "github.com/geekymode/-CustomTokenizer.git",
+    repo       = "github.com/geekymode/CustomTokenizer.git",
     devbranch  = "main",
     versions   = ["stable" => "v^", "v#.#", "dev" => "dev"],
 )
