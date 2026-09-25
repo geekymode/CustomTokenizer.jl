@@ -17,7 +17,7 @@ would ever change.
 
 The default `rng` reproduces the numbers used throughout the documentation.
 """
-mutable struct Model
+mutable struct Model <: AbstractEmbedding
     vocab::Vocabulary
     W::Matrix{Float64}
     C::Matrix{Float64}
@@ -48,8 +48,8 @@ function Base.show(io::IO, ::MIME"text/plain", m::Model)
             maximum(abs, m.W), maximum(abs, m.C))
 end
 
-_id(m::Model, w::AbstractString) = m.vocab[w]
-_id(::Model, i::Integer) = Int(i)
+_id(m::AbstractEmbedding, w::AbstractString) = m.vocab[w]
+_id(::AbstractEmbedding, i::Integer) = Int(i)
 
 """
     wordvec(model, word) -> AbstractVector
@@ -57,7 +57,7 @@ _id(::Model, i::Integer) = Int(i)
 Column of `W` for `word` (a string or an id). This is the vector that is kept
 after training.
 """
-wordvec(m::Model, w) = view(m.W, :, _id(m, w))
+wordvec(m::AbstractEmbedding, w) = view(m.W, :, _id(m, w))
 
 """
     ctxvec(model, word) -> AbstractVector
@@ -99,7 +99,7 @@ cosine_similarity(u::AbstractVector, v::AbstractVector) = dot(u, v) / (norm(u) *
 Cosine similarity of two *word* vectors (columns of `W`). This is the number
 that says cat is like dog.
 """
-similarity(m::Model, a, b) = cosine_similarity(wordvec(m, a), wordvec(m, b))
+similarity(m::AbstractEmbedding, a, b) = cosine_similarity(wordvec(m, a), wordvec(m, b))
 
 """
     nearest_neighbours(model, word, k=5) -> Vector{Tuple{String,Float64}}
@@ -107,7 +107,7 @@ similarity(m::Model, a, b) = cosine_similarity(wordvec(m, a), wordvec(m, b))
 The `k` words whose vectors point most like `word`'s, closest first, excluding
 `word` itself.
 """
-function nearest_neighbours(m::Model, word, k::Integer = 5)
+function nearest_neighbours(m::AbstractEmbedding, word, k::Integer = 5)
     i = _id(m, word)
     V = length(m.vocab)
     sims = [j == i ? -Inf : similarity(m, i, j) for j in 1:V]
@@ -121,7 +121,7 @@ Answer "`a` is to `b` as `c` is to ?" by looking for the words closest to
 `b - a + c`, excluding the three inputs. A toy corpus rarely has enough evidence
 for this to work; it is here because the question always comes up.
 """
-function analogy(m::Model, a, b, c; k::Integer = 3)
+function analogy(m::AbstractEmbedding, a, b, c; k::Integer = 3)
     ia, ib, ic = _id(m, a), _id(m, b), _id(m, c)
     target = wordvec(m, ib) .- wordvec(m, ia) .+ wordvec(m, ic)
     V = length(m.vocab)

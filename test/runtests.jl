@@ -352,6 +352,63 @@ end
     @test similarity(m, "car", "drives") > similarity(m, "car", "apple")
 end
 
+@testset "loading and saving vectors" begin
+    m = toy_model()
+    train!(m, PAIRS; epochs = 40)
+    e = embedding(m; name = "toy")
+    @test e isa Embedding && size(e) == (8, 22)
+    @test similarity(e, "king", "queen") ≈ similarity(m, "king", "queen")
+    @test first(nearest_neighbours(e, "king", 1)) == first(nearest_neighbours(m, "king", 1))
+
+    mktempdir() do dir
+        path = joinpath(dir, "toy.vec")
+        save_vectors(path, e)
+        back = load_vectors(path)
+        @test length(back.vocab) == 22
+        @test isapprox(back.W, e.W; atol = 1e-5)
+        @test similarity(back, "king", "queen") ≈ similarity(e, "king", "queen") atol = 1e-4
+
+        # a header-less file (the GloVe convention) loads the same way
+        plain = joinpath(dir, "toy_noheader.vec")
+        save_vectors(plain, e; header = false)
+        @test length(load_vectors(plain).vocab) == 22
+        # and max_words truncates from the top
+        @test length(load_vectors(path; max_words = 5).vocab) == 5
+        # an empty file is an error, not an empty embedding
+        empty = joinpath(dir, "empty.vec"); write(empty, "")
+        @test_throws ArgumentError load_vectors(empty)
+    end
+end
+
+@testset "comparing two embeddings" begin
+    a = embedding(let m = toy_model(); train!(m, PAIRS; epochs = 60, rng = Xoshiro(1)); m end)
+    b = embedding(let m = toy_model(); train!(m, PAIRS; epochs = 60, rng = Xoshiro(2)); m end)
+
+    @test length(shared_vocabulary(a, b)) == 22
+    @test neighbour_overlap(a, a, VOCAB.words; k = 5).mean == 1.0          # with itself
+    ov = neighbour_overlap(a, b, VOCAB.words; k = 5)
+    @test 0 <= ov.mean <= 1
+    @test length(ov.per_word) == 22
+    @test ov.per_word["king"] >= 0                                          # queen is stable
+
+    agree = similarity_agreement(a, b; pairs = 400)
+    @test agree.n > 300
+    @test -1 <= agree.correlation <= 1
+    @test similarity_agreement(a, a; pairs = 200).correlation ≈ 1
+
+    # two embeddings that share only some words
+    half = Embedding(build_vocab([VOCAB.words[1:10]]), a.W[:, 1:10]; name = "half")
+    @test length(shared_vocabulary(a, half)) == 10
+
+    acc = analogy_accuracy(a)
+    @test acc.asked == 0                       # the toy corpus has none of these words
+    @test length(acc.skipped) == length(ANALOGY_QUESTIONS)
+    toy_qs = [("cat", "dog", "king", "queen"), ("king", "queen", "cat", "dog")]
+    acc2 = analogy_accuracy(a, toy_qs; k = 3)
+    @test acc2.asked == 2 && 0 <= acc2.accuracy <= 1
+    @test length(acc2.results) == 2
+end
+
 @testset "plotting extension" begin
     using CairoMakie                       # loading a backend activates the real methods
     m = toy_model()

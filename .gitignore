@@ -8,3 +8,7 @@ Manifest.toml
 # Documenter
 docs/build/
 docs/site/
+
+# downloaded or generated vector files (large, reproducible)
+experiments/results/*.vec
+experiments/results/stream_*.txt

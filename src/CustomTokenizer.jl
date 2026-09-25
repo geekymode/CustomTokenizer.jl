@@ -36,6 +36,13 @@ export TOY_TEXT, tokenize, Vocabulary, build_vocab, vocab_size, haskey_word,
 # pairs and counts
 export context_pairs, corpus_pairs, cooccurrence, row_totals, pair_count
 
+# embeddings: trained here, or loaded from a file
+export AbstractEmbedding, Embedding, embedding, load_vectors, save_vectors
+
+# comparing two embeddings
+export shared_vocabulary, neighbour_overlap, similarity_agreement,
+       analogy_accuracy, ANALOGY_QUESTIONS
+
 # model
 export Model, wordvec, ctxvec, score, probability, cosine_similarity, similarity,
        nearest_neighbours, analogy, column_norms
@@ -61,11 +68,13 @@ export plot_tables, plot_update, plot_loss, plot_similarity_matrix,
 include("vocab.jl")
 include("corpus.jl")
 include("pairs.jl")
+include("embedding.jl")
 include("model.jl")
 include("sampling.jl")
 include("train.jl")
 include("stepping.jl")
 include("analysis.jl")
+include("compare.jl")
 include("plots.jl")
 
 end # module

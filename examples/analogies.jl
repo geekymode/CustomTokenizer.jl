@@ -87,6 +87,12 @@ for w in ("king", "aunt", "paris")
             join((@sprintf("%s (%.2f)", x, s) for (x, s) in nearest_neighbours(model, w, 5)), ", "))
 end
 
+# keep the vectors so examples/compare_pretrained.jl can use them
+out = joinpath(@__DIR__, "..", "experiments", "results", "ours-text8.vec")
+mkpath(dirname(out))
+save_vectors(out, embedding(model; name = "ours (text8)"))
+@printf("\nsaved %d vectors to %s\n", length(model.vocab), out)
+
 println("""
 
 Analogies are a harder test than neighbours: they need the *difference*
