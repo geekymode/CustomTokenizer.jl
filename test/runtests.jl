@@ -421,6 +421,11 @@ end
 
     @test plot_tables(m) isa Figure
     @test plot_tables(m; values = false) isa Figure
+    # the colour scale is opt-in, and asking for it widens the figure
+    @test plot_tables(m; colorbar = true) isa Figure
+    @test size(plot_tables(m; colorbar = true).scene)[1] >
+          size(plot_tables(m).scene)[1]
+    @test plot_similarity_matrix(m; colorbar = true) isa Figure
     @test plot_update(m, update_pair!(m, "cat", "drinks", ["on", "wears", "queen"], 0.05)) isa Figure
     @test plot_loss(tlog) isa Figure
     @test plot_similarity_matrix(m) isa Figure

@@ -92,10 +92,79 @@ plot_evolution(model, trainlog.snapshots)   # how they got there
 
 ## Installation
 
+This package is **not in the General registry**, so `Pkg.add("CustomTokenizer")`
+will not find it. Install it from the repository URL instead:
+
 ```julia
 using Pkg
-Pkg.develop(path = "path/to/CustomTokenizer")
-Pkg.add("CairoMakie")     # optional, for the figures
+Pkg.add(url = "https://github.com/geekymode/CustomTokenizer.jl")
+```
+
+or, in the Pkg REPL mode that `]` opens:
+
+```
+pkg> add https://github.com/geekymode/CustomTokenizer.jl
+```
+
+That tracks the default branch. To pin a branch or a tag, add `rev`:
+
+```julia
+Pkg.add(url = "https://github.com/geekymode/CustomTokenizer.jl", rev = "main")
+```
+
+Julia 1.9 or newer is required; the package is developed on 1.13. Updating
+later is `Pkg.update("CustomTokenizer")`; removing it is
+`Pkg.rm("CustomTokenizer")`.
+
+### Plots
+
+The figures need a Makie backend, which is a separate install because the core
+package deliberately depends on nothing beyond the standard library:
+
+```julia
+Pkg.add("CairoMakie")     # or GLMakie for an interactive window
+```
+
+Loading it is what activates `plot_tables` and the rest — no other
+change is needed.
+
+### Working on the package itself
+
+To edit the source, clone it and work in its own environment:
+
+```
+git clone https://github.com/geekymode/CustomTokenizer.jl
+cd CustomTokenizer.jl
+julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
+```
+
+`Pkg.develop(path = ".")` from another environment points that environment at
+your clone, so edits take effect without reinstalling.
+
+### The experiment scripts
+
+`experiments/` compares this package with real LLM tokenizers and with
+published vectors. Those scripts are Python, and are not needed to use the
+package:
+
+```
+pip install tiktoken tokenizers huggingface_hub gensim
+```
+
+They download tokenizer files and word vectors (tens of MB), never model
+weights.
+
+### Checking that it works
+
+```julia
+using CustomTokenizer
+
+sentences = tokenize(TOY_TEXT)
+vocab     = build_vocab(sentences)
+model     = Model(vocab)
+train!(model, corpus_pairs(sentences, vocab; window = 2); epochs = 300)
+
+similarity(model, "king", "queen")     # ≈ 1.0 if everything is working
 ```
 
 ## Documentation

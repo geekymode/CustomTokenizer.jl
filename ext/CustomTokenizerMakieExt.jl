@@ -47,22 +47,24 @@ function _table!(ax, M, words, crange; values = true, outline = Int[], edge = CT
 end
 
 function CustomTokenizer.plot_tables(m::Model; values = true, highlight = nothing,
-                                         colorrange = nothing, figure = (;))
+                                         colorrange = nothing, colorbar = false,
+                                         figure = (;))
     d, V = size(m.W)
     hi = colorrange === nothing ?
          max(0.0625, maximum(abs, m.W), maximum(abs, m.C)) : colorrange
     crange = hi isa Tuple ? hi : (-hi, hi)
     wcols = highlight === nothing ? Int[] : changed_columns(highlight).W
     ccols = highlight === nothing ? Int[] : changed_columns(highlight).C
-    fig = Figure(; size = (max(900, 55V), 260 + 42d), figure...)
+    fig = Figure(; size = (max(860, 52V) + (colorbar ? 70 : 0), 250 + 42d), figure...)
     axW = Axis(fig[1, 1]; title = "W — word vectors (kept)", titlealign = :left,
                aspect = DataAspect())
     _table!(axW, m.W, m.vocab.words, crange; values, outline = wcols, edge = CENTER_EDGE)
     axC = Axis(fig[2, 1]; title = "C — context vectors (discarded after training)",
                titlealign = :left, aspect = DataAspect())
     _table!(axC, m.C, m.vocab.words, crange; values, outline = ccols, edge = CTX_EDGE)
-    Colorbar(fig[1:2, 2]; colormap = :viridis, colorrange = crange, width = 14,
-             label = "value")
+    colorbar && Colorbar(fig[1:2, 2]; colormap = :viridis, colorrange = crange,
+                         width = 14, label = "value")
+    rowgap!(fig.layout, 10)
     fig
 end
 
@@ -112,12 +114,13 @@ function CustomTokenizer.plot_loss(trainlog::TrainLog; figure = (;))
 end
 
 function CustomTokenizer.plot_similarity_matrix(m::Model; order = nothing,
-                                                    labels = true, figure = (;))
+                                                    labels = true, colorbar = false,
+                                                    figure = (;))
     idx = order === nothing ? collect(1:length(m.vocab)) : collect(order)
     S = similarity_matrix(m; order = idx)
     words = m.vocab.words[idx]
     V = length(idx)
-    fig = Figure(; size = (620, 620), figure...)
+    fig = Figure(; size = (620 + (colorbar ? 60 : 0), 620), figure...)
     ax = Axis(fig[1, 1]; aspect = DataAspect(), yreversed = true,
               title = "cosine similarity between word vectors", titlealign = :left)
     heatmap!(ax, 1:V, 1:V, permutedims(S); colormap = :viridis, colorrange = (-1, 1))
@@ -131,7 +134,7 @@ function CustomTokenizer.plot_similarity_matrix(m::Model; order = nothing,
         hidedecorations!(ax)
     end
     hidespines!(ax)
-    Colorbar(fig[1, 2]; colormap = :viridis, colorrange = (-1, 1), width = 14)
+    colorbar && Colorbar(fig[1, 2]; colormap = :viridis, colorrange = (-1, 1), width = 14)
     fig
 end
 

@@ -18,11 +18,14 @@ for f in (:plot_tables, :plot_update, :plot_loss, :plot_similarity_matrix,
 end
 
 @doc """
-    plot_tables(model; values=true, highlight=nothing, colorrange=nothing)
+    plot_tables(model; values=true, highlight=nothing, colorrange=nothing, colorbar=false)
 
 Draw `W` above `C` as viridis heatmaps, one column per word, with the rounded
 value in each cell when `values` is true. `highlight` may be an
 [`UpdateInfo`](@ref), in which case the columns that update touched are outlined.
+
+The colour scale is not drawn by default: with every cell labelled it adds
+little and costs width. Pass `colorbar = true` for it.
 
 Requires a Makie backend.
 """ plot_tables
@@ -45,10 +48,11 @@ Requires a Makie backend.
 """ plot_loss
 
 @doc """
-    plot_similarity_matrix(model; order=nothing, labels=true)
+    plot_similarity_matrix(model; order=nothing, labels=true, colorbar=false)
 
 Cosine similarity between every pair of word vectors as a heatmap. Pass `order`
-to group words and reveal block structure.
+to group words and reveal block structure, and `colorbar = true` for the scale
+(values run from -1 to +1 throughout).
 
 Requires a Makie backend.
 """ plot_similarity_matrix
