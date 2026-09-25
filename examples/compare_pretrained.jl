@@ -59,7 +59,7 @@ for e in (ours, glove)
     @printf("%-26s %d/%d at rank 1, %d/%d in the top 4",
             e.name, acc.hits, acc.asked, acc4.hits, acc4.asked)
     isempty(acc.skipped) || @printf("  (skipped %d: missing words)", length(acc.skipped))
-    println()
+    println("\n    ✓ = the expected answer is in the top 4")
     for (a, b, c, want, got, ok) in acc4.results
         @printf("    %s %-7s → %-8s as %-8s → %-9s got %s\n",
                 ok ? "✓" : " ", a, b, c, want, join(got, ", "))
