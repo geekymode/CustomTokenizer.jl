@@ -1,5 +1,8 @@
 # CustomTokenizer.jl
 
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://geekymode.github.io/CustomTokenizer.jl/dev/)
+[![Build](https://github.com/geekymode/CustomTokenizer.jl/actions/workflows/documentation.yml/badge.svg)](https://github.com/geekymode/CustomTokenizer.jl/actions/workflows/documentation.yml)
+
 Skip-gram word2vec with negative sampling, written to be **read** rather than to
 be fast. Every step of the algorithm is a named function you can call on its own,
 print, plot and test.
@@ -97,8 +100,11 @@ Pkg.add("CairoMakie")     # optional, for the figures
 
 ## Documentation
 
+**<https://geekymode.github.io/CustomTokenizer.jl/dev/>**, rebuilt on every push.
+To build it locally:
+
 ```
-cd docs && julia --project=. make.jl     # builds docs/build/index.html
+cd docs && julia --project=. make.jl     # writes docs/build/index.html
 ```
 
 Pages: getting started, how the update works (loss, gradient, the rank-one
