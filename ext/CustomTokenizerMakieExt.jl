@@ -2,7 +2,9 @@ module CustomTokenizerMakieExt
 
 using CustomTokenizer
 using CustomTokenizer: Model, UpdateInfo, TrainLog, Vocabulary, pca2,
-                           similarity_matrix, column_norms, changed_columns
+                           similarity_matrix, column_norms, changed_columns,
+                           sinusoidal_encoding, position_similarity, rope_similarity,
+                           alibi_slopes
 using Makie
 using LinearAlgebra, Printf
 
@@ -199,6 +201,46 @@ function CustomTokenizer.plot_evolution(m::Model, snapshots::AbstractDict;
         limits!(ax, -0.95, 0.95, -0.95, 0.95)
         hidedecorations!(ax); hidespines!(ax)
     end
+    fig
+end
+
+function CustomTokenizer.plot_positional_encoding(P::AbstractMatrix; colorbar = false,
+                                                  figure = (;))
+    d, n = size(P)
+    fig = Figure(; size = (760 + (colorbar ? 70 : 0), 380), figure...)
+    ax = Axis(fig[1, 1]; xlabel = "position", ylabel = "dimension",
+              title = "sinusoidal encoding: fast clocks on top, slow ones below",
+              titlealign = :left, yreversed = true)
+    heatmap!(ax, 1:n, 1:d, permutedims(P); colormap = :viridis, colorrange = (-1, 1))
+    colorbar && Colorbar(fig[1, 2]; colormap = :viridis, colorrange = (-1, 1), width = 14)
+    fig
+end
+
+function CustomTokenizer.plot_position_decay(; dim = 64, len = 64, nheads = 4, figure = (;))
+    fig = Figure(; size = (1080, 380), figure...)
+    gaps = 0:(len - 1)
+
+    P = sinusoidal_encoding(dim, len)
+    S = position_similarity(P)
+    ax1 = Axis(fig[1, 1]; xlabel = "gap between positions", ylabel = "cosine",
+               title = "sinusoidal: position vectors", titlealign = :left)
+    lines!(ax1, gaps, [S[1, g + 1] for g in gaps]; color = ANIMAL, linewidth = 2,
+           label = "from position 0")
+    lines!(ax1, 0:(len - 21), [S[21, 21 + g] for g in 0:(len - 21)]; color = ROYAL,
+           linewidth = 2, linestyle = :dash, label = "from position 20")
+    axislegend(ax1; position = :rt, framevisible = false, labelsize = 10)
+
+    ax2 = Axis(fig[1, 2]; xlabel = "gap between positions", ylabel = "dot product",
+               title = "rotary: a token against itself", titlealign = :left)
+    lines!(ax2, gaps, rope_similarity(dim, len); color = CTX_EDGE, linewidth = 2)
+
+    ax3 = Axis(fig[1, 3]; xlabel = "gap between positions", ylabel = "added to the score",
+               title = "ALiBi: one penalty per head", titlealign = :left)
+    for (h, m) in enumerate(alibi_slopes(nheads))
+        lines!(ax3, gaps, [-m * g for g in gaps]; linewidth = 2,
+               label = @sprintf("slope %.3f", m))
+    end
+    axislegend(ax3; position = :lb, framevisible = false, labelsize = 10)
     fig
 end
 

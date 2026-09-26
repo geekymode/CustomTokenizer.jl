@@ -9,7 +9,8 @@ Plotting needs a Makie backend. Run
 before calling this function."""
 
 for f in (:plot_tables, :plot_update, :plot_loss, :plot_similarity_matrix,
-          :plot_cooccurrence, :plot_embedding_map, :plot_evolution)
+          :plot_cooccurrence, :plot_embedding_map, :plot_evolution,
+          :plot_positional_encoding, :plot_position_decay)
     @eval begin
         function $f(args...; kwargs...)
             error($_PLOT_HINT)
@@ -82,3 +83,23 @@ one so the motion between frames is comparable.
 
 Requires a Makie backend.
 """ plot_evolution
+
+@doc """
+    plot_positional_encoding(P; colorbar=false)
+
+The encoding itself as a heatmap: dimensions down, positions across. The fast
+clocks are the top rows, the slow ones the bottom, and reading a column is
+reading the position.
+
+Requires a Makie backend.
+""" plot_positional_encoding
+
+@doc """
+    plot_position_decay(; dim=64, len=64, nheads=4)
+
+How each scheme scores distance: the cosine between sinusoidal position vectors,
+the rotary dot product from [`rope_similarity`](@ref), and the ALiBi penalty per
+head, all against the gap between two positions.
+
+Requires a Makie backend.
+""" plot_position_decay

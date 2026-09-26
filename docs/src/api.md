@@ -106,6 +106,18 @@ progress
 last_update
 ```
 
+## Positional encoding
+
+```@docs
+sinusoidal_encoding
+learned_positions
+rope
+alibi_slopes
+alibi_bias
+position_similarity
+rope_similarity
+```
+
 ## Analysis
 
 ```@docs
@@ -130,4 +142,6 @@ plot_similarity_matrix
 plot_cooccurrence
 plot_embedding_map
 plot_evolution
+plot_positional_encoding
+plot_position_decay
 ```

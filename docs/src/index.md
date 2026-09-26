@@ -54,6 +54,7 @@ train!(model, pairs; epochs = 300)
 | analysis | [`target_probability`](@ref), [`target_matrix`](@ref), [`calibration`](@ref), [`similarity_matrix`](@ref), [`pca2`](@ref), [`neighbour_ranking`](@ref), [`ranking_churn`](@ref) |
 | embeddings | [`Embedding`](@ref), [`embedding`](@ref), [`load_vectors`](@ref), [`save_vectors`](@ref) |
 | comparing | [`shared_vocabulary`](@ref), [`neighbour_overlap`](@ref), [`similarity_agreement`](@ref), [`analogy_accuracy`](@ref) |
+| positions | [`sinusoidal_encoding`](@ref), [`learned_positions`](@ref), [`rope`](@ref), [`alibi_slopes`](@ref), [`alibi_bias`](@ref), [`position_similarity`](@ref), [`rope_similarity`](@ref) |
 | plots | [`plot_tables`](@ref), [`plot_update`](@ref), [`plot_loss`](@ref), [`plot_similarity_matrix`](@ref), [`plot_cooccurrence`](@ref), [`plot_embedding_map`](@ref), [`plot_evolution`](@ref) |
 
 Plotting lives in a package extension: the core package has no dependencies
@@ -146,6 +147,8 @@ similarity(model, "king", "queen")     # ≈ 1.0 if everything is working
   tables change.
 * [Reading the plots](plots.md) — what each figure shows.
 * [Scaling up](scaling.md) — what changes on a real corpus.
+* [Positional encoding](positional.md) — sinusoidal, learned, RoPE and ALiBi,
+  with the properties checked rather than asserted.
 * [Examples](examples.md) — every script in the repository, with the command
   that runs it and what it prints.
 * [Published vectors and analogies](pretrained.md) — load GloVe, ask

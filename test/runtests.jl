@@ -352,6 +352,96 @@ end
     @test similarity(m, "car", "drives") > similarity(m, "car", "apple")
 end
 
+@testset "positional encoding" begin
+    @testset "sinusoidal" begin
+        P = sinusoidal_encoding(8, 16)
+        @test size(P) == (8, 16)
+        @test P[:, 1] == [0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0]   # position 0
+        @test all(-1 .<= P .<= 1)
+        @test_throws ArgumentError sinusoidal_encoding(7, 4)         # dim must be even
+        # the definition, spot-checked
+        dim, p, i = 8, 5, 2
+        θ = p / 10_000.0^(2i / dim)
+        @test P[2i + 1, p + 1] ≈ sin(θ)
+        @test P[2i + 2, p + 1] ≈ cos(θ)
+        # every position is distinct
+        @test length(unique(eachcol(P))) == 16
+        # the point of it: PE[:, p+k] is the same rotation of PE[:, p] for every p
+        k = 3
+        for pair in 0:(dim ÷ 2 - 1), p in (0, 4, 9)
+            θk = k / 10_000.0^(2pair / dim)
+            c, s_ = cos(θk), sin(θk)
+            sinp, cosp = P[2pair + 1, p + 1], P[2pair + 2, p + 1]
+            @test P[2pair + 1, p + k + 1] ≈ sinp * c + cosp * s_
+            @test P[2pair + 2, p + k + 1] ≈ cosp * c - sinp * s_
+        end
+    end
+
+    @testset "learned table" begin
+        L = learned_positions(16, 32)
+        @test size(L) == (16, 32)
+        @test L == learned_positions(16, 32)                          # same seed
+        @test L != learned_positions(16, 32; rng = Xoshiro(8))
+        @test maximum(abs, L) < 0.2                                   # small init
+    end
+
+    @testset "RoPE" begin
+        rng = Xoshiro(4)
+        q, k = randn(rng, 16), randn(rng, 16)
+        @test rope(q, 0) ≈ q                                          # no rotation at 0
+        @test norm(rope(q, 137)) ≈ norm(q)                            # rotations preserve length
+        # the property everything rests on: only the gap matters
+        for (m, n) in ((7, 3), (100, 96), (5, 5), (2, 9))
+            @test dot(rope(q, m), rope(k, n)) ≈ dot(rope(q, m - n), k)
+        end
+        # the matrix method rotates each column by its own position
+        X = randn(rng, 8, 4)
+        Y = rope(X, [0, 1, 2, 3])
+        @test size(Y) == size(X)
+        @test Y[:, 1] ≈ X[:, 1]
+        @test Y[:, 3] ≈ rope(X[:, 3], 2)
+        @test_throws DimensionMismatch rope(X, [0, 1])
+        @test_throws ArgumentError rope(randn(rng, 7, 2), [0, 1])
+        # a larger base turns the clocks more slowly
+        @test dot(rope(q, 1; base = 1e6), q) > dot(rope(q, 1; base = 1e3), q)
+    end
+
+    @testset "ALiBi" begin
+        s8 = alibi_slopes(8)
+        @test length(s8) == 8
+        @test s8 ≈ [2.0^-1, 2.0^-2, 2.0^-3, 2.0^-4, 2.0^-5, 2.0^-6, 2.0^-7, 2.0^-8]
+        @test issorted(s8; rev = true) && all(>(0), s8)
+        @test length(alibi_slopes(12)) == 12                          # not a power of two
+        @test length(alibi_slopes(1)) == 1
+        @test_throws ArgumentError alibi_slopes(0)
+
+        B = alibi_bias(4, 6)
+        @test size(B) == (6, 6, 4)
+        @test all(B[i, i, h] == 0 for i in 1:6, h in 1:4)             # no penalty at zero distance
+        @test all(B[i, j, h] == -Inf for i in 1:6, j in 1:6, h in 1:4 if j > i)
+        @test B[6, 1, 1] < B[6, 5, 1]                                 # further is worse
+        @test B[6, 1, 1] < B[6, 1, 4]                                 # steeper head, harsher penalty
+        F = alibi_bias(2, 5; causal = false)
+        @test F ≈ permutedims(F, (2, 1, 3))                           # symmetric without the mask
+        @test all(isfinite, F)
+    end
+
+    @testset "what the encodings look like" begin
+        P = sinusoidal_encoding(32, 40)
+        S = position_similarity(P)
+        @test size(S) == (40, 40)
+        @test S ≈ S'
+        @test all(≈(1), [S[i, i] for i in 1:40])
+        @test S[1, 2] > S[1, 20]                                      # near beats far
+
+        decay = rope_similarity(64, 12)
+        @test length(decay) == 12
+        @test decay[1] ≈ 1
+        @test decay[2] < decay[1]
+        @test mean(decay[8:12]) < mean(decay[1:4])                    # falls away with distance
+    end
+end
+
 @testset "loading and saving vectors" begin
     m = toy_model()
     train!(m, PAIRS; epochs = 40)
@@ -433,6 +523,9 @@ end
     @test plot_cooccurrence(N, VOCAB) isa Figure
     @test plot_embedding_map(m; groups = groups) isa Figure
     @test plot_evolution(m, tlog.snapshots; groups = groups) isa Figure
+    @test plot_positional_encoding(sinusoidal_encoding(32, 40)) isa Figure
+    @test plot_positional_encoding(sinusoidal_encoding(16, 20); colorbar = true) isa Figure
+    @test plot_position_decay(; dim = 32, len = 24, nheads = 3) isa Figure
 
     # a figure really does render
     mktempdir() do dir

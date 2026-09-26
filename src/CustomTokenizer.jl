@@ -57,13 +57,18 @@ export UpdateInfo, update_pair!, learning_rate, train!, TrainLog, evaluate_loss
 # stepping
 export TrainStepper, step!, run_updates!, finish_epoch!, reset!, last_update, progress
 
+# positional encoding
+export sinusoidal_encoding, learned_positions, rope, alibi_slopes, alibi_bias,
+       position_similarity, rope_similarity
+
 # analysis
 export target_probability, target_matrix, calibration, similarity_matrix, pca2,
        neighbour_ranking, ranking_churn
 
 # plotting (implemented in the Makie extension)
 export plot_tables, plot_update, plot_loss, plot_similarity_matrix,
-       plot_cooccurrence, plot_embedding_map, plot_evolution
+       plot_cooccurrence, plot_embedding_map, plot_evolution,
+       plot_positional_encoding, plot_position_decay
 
 include("vocab.jl")
 include("corpus.jl")
@@ -73,6 +78,7 @@ include("model.jl")
 include("sampling.jl")
 include("train.jl")
 include("stepping.jl")
+include("positional.jl")
 include("analysis.jl")
 include("compare.jl")
 include("plots.jl")
