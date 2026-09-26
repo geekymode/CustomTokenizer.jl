@@ -67,7 +67,7 @@ questions, prints the neighbours of a few words, and saves the vectors to
 ## Comparing with published vectors
 
 ```
-pip install tiktoken tokenizers huggingface_hub gensim
+pip install gensim huggingface_hub          # only for the GloVe download
 python experiments/fetch_pretrained.py --words 50000 --dim 50
 julia --project=. examples/compare_pretrained.jl
 ```
@@ -82,15 +82,15 @@ The first thing a transformer does is look up a row of its embedding table per
 token. Those rows can be pulled out and compared like any other vectors:
 
 ```
-python experiments/extract_llm_embeddings.py                       # Gemma 3 270M
-python experiments/extract_llm_embeddings.py --repo Qwen/Qwen2.5-0.5B
+julia --project=. experiments/extract_embeddings.jl                # Qwen 2.5 0.5B
+julia --project=. experiments/extract_embeddings.jl gpt2
 julia --project=. examples/compare_llm_embeddings.jl
 ```
 
-The extractor downloads the checkpoint (hundreds of MB to a couple of GB), reads
-the embedding tensor with a small safetensors reader — no torch needed — keeps
-the rows whose token is a whole word, and writes them as a `.vec` file.
-`--self-test` checks the file parsing without downloading anything.
+All Julia: [`hf_download`](@ref) fetches the checkpoint, [`read_safetensor`](@ref)
+reads the embedding tensor — safetensors is a JSON header followed by raw bytes,
+so no torch is involved — and [`embedding_from_checkpoint`](@ref) keeps the rows
+whose token is a whole word and writes them as a `.vec` file.
 
 `compare_llm_embeddings.jl` uses whichever vector files it finds, so it works
 with two of the three and gains the third later. It prints a per-question
@@ -106,8 +106,8 @@ table of where the models disagree:
 ## Real tokenizers
 
 ```
-python experiments/tokenizer_zoo.py
-julia --project=docs experiments/tokenizer_plots.jl
+julia --project=. experiments/tokenizer_zoo.jl
+julia --project=docs experiments/tokenizer_plots.jl     # needs the Python tables for now
 ```
 
 Downloads the tokenizer files for GPT-3, GPT-3.5/4, GPT-4o, Gemma 2, Gemma 4
@@ -117,7 +117,7 @@ whether `decode(encode(x)) == x`. See [Tokenizer experiments](tokenizers.md)
 for the results.
 
 ```
-python experiments/analogy_tokens.py
+julia --project=. experiments/analogy_tokens.jl
 ```
 
 Checks whether the analogy words survive as single tokens in each tokenizer,
@@ -126,7 +126,7 @@ which decides whether the model behind it has one vector for them at all.
 ## Does the tokenizer change the vectors?
 
 ```
-python experiments/tokenize_corpus.py ../lee_background.cor
+julia --project=. experiments/tokenize_corpus.jl ../lee_background.cor
 julia --project=docs experiments/subword_vs_word.jl
 ```
 
@@ -141,8 +141,8 @@ neighbours.
 | `examples/figures.jl` | `examples/figures/*.png` |
 | `examples/analogies.jl` | `experiments/results/ours-text8.vec` |
 | `experiments/fetch_pretrained.py` | `experiments/results/glove-*.vec` |
-| `experiments/extract_llm_embeddings.py` | `experiments/results/*-embeddings.vec` |
-| `experiments/tokenizer_zoo.py` | `experiments/results/tokenizers.json`, `*.tsv` |
-| `experiments/tokenize_corpus.py` | `experiments/results/stream_*.txt`, `word_pieces.tsv` |
+| `experiments/extract_embeddings.jl` | `experiments/results/*-embeddings.vec` |
+| `experiments/tokenizer_zoo.jl` | `experiments/results/tokenizers.json`, `*.tsv` |
+| `experiments/tokenize_corpus.jl` | `experiments/results/stream_*.txt`, `word_pieces.tsv` |
 
 Vector files are gitignored — they are large and every script regenerates them.

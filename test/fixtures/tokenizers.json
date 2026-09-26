@@ -1,0 +1,615 @@
+{
+ "gpt2": {
+  "repo": "gpt2",
+  "path": "/Users/rethna/.cache/huggingface/hub/models--gpt2/snapshots/607a30d783dfa663caf39e06633721c8d4cfcd7e/tokenizer.json",
+  "vocab_size": 50257,
+  "cases": [
+   {
+    "text": "the cat drinks milk",
+    "ids": [
+     1169,
+     3797,
+     11758,
+     7545
+    ],
+    "tokens": [
+     "the",
+     "Ġcat",
+     "Ġdrinks",
+     "Ġmilk"
+    ],
+    "decoded": "the cat drinks milk"
+   },
+   {
+    "text": "The cat drinks milk.",
+    "ids": [
+     464,
+     3797,
+     11758,
+     7545,
+     13
+    ],
+    "tokens": [
+     "The",
+     "Ġcat",
+     "Ġdrinks",
+     "Ġmilk",
+     "."
+    ],
+    "decoded": "The cat drinks milk."
+   },
+   {
+    "text": "man king woman queen",
+    "ids": [
+     805,
+     5822,
+     2415,
+     16599
+    ],
+    "tokens": [
+     "man",
+     "Ġking",
+     "Ġwoman",
+     "Ġqueen"
+    ],
+    "decoded": "man king woman queen"
+   },
+   {
+    "text": "In 2026 the price rose 7900%.",
+    "ids": [
+     818,
+     1160,
+     2075,
+     262,
+     2756,
+     8278,
+     9225,
+     405,
+     7225
+    ],
+    "tokens": [
+     "In",
+     "Ġ20",
+     "26",
+     "Ġthe",
+     "Ġprice",
+     "Ġrose",
+     "Ġ79",
+     "00",
+     "%."
+    ],
+    "decoded": "In 2026 the price rose 7900%."
+   },
+   {
+    "text": "def f(x):\n    return x + 1\n",
+    "ids": [
+     4299,
+     277,
+     7,
+     87,
+     2599,
+     198,
+     220,
+     220,
+     220,
+     1441,
+     2124,
+     1343,
+     352,
+     198
+    ],
+    "tokens": [
+     "def",
+     "Ġf",
+     "(",
+     "x",
+     "):",
+     "Ċ",
+     "Ġ",
+     "Ġ",
+     "Ġ",
+     "Ġreturn",
+     "Ġx",
+     "Ġ+",
+     "Ġ1",
+     "Ċ"
+    ],
+    "decoded": "def f(x):\n    return x + 1\n"
+   },
+   {
+    "text": "a     b",
+    "ids": [
+     64,
+     220,
+     220,
+     220,
+     220,
+     275
+    ],
+    "tokens": [
+     "a",
+     "Ġ",
+     "Ġ",
+     "Ġ",
+     "Ġ",
+     "Ġb"
+    ],
+    "decoded": "a     b"
+   },
+   {
+    "text": "naïve café 🐈",
+    "ids": [
+     2616,
+     38776,
+     40304,
+     12520,
+     238,
+     230
+    ],
+    "tokens": [
+     "na",
+     "Ã¯ve",
+     "ĠcafÃ©",
+     "ĠðŁ",
+     "Ĳ",
+     "Ī"
+    ],
+    "decoded": "naïve café 🐈"
+   },
+   {
+    "text": "antidisestablishmentarianism",
+    "ids": [
+     415,
+     29207,
+     44390,
+     3699,
+     1042
+    ],
+    "tokens": [
+     "ant",
+     "idis",
+     "establishment",
+     "arian",
+     "ism"
+    ],
+    "decoded": "antidisestablishmentarianism"
+   },
+   {
+    "text": "  leading and trailing  ",
+    "ids": [
+     220,
+     3756,
+     290,
+     25462,
+     220,
+     220
+    ],
+    "tokens": [
+     "Ġ",
+     "Ġleading",
+     "Ġand",
+     "Ġtrailing",
+     "Ġ",
+     "Ġ"
+    ],
+    "decoded": "  leading and trailing  "
+   },
+   {
+    "text": "",
+    "ids": [],
+    "tokens": [],
+    "decoded": ""
+   }
+  ]
+ },
+ "gemma4": {
+  "repo": "google/gemma-4-E2B",
+  "path": "/Users/rethna/.cache/huggingface/hub/models--google--gemma-4-E2B/snapshots/d29ff6b45f081a49ee2733a859c9c9c2d95d1a6f/tokenizer.json",
+  "vocab_size": 262144,
+  "cases": [
+   {
+    "text": "the cat drinks milk",
+    "ids": [
+     1437,
+     5866,
+     19060,
+     9556
+    ],
+    "tokens": [
+     "the",
+     "▁cat",
+     "▁drinks",
+     "▁milk"
+    ],
+    "decoded": "the cat drinks milk"
+   },
+   {
+    "text": "The cat drinks milk.",
+    "ids": [
+     818,
+     5866,
+     19060,
+     9556,
+     236761
+    ],
+    "tokens": [
+     "The",
+     "▁cat",
+     "▁drinks",
+     "▁milk",
+     "."
+    ],
+    "decoded": "The cat drinks milk."
+   },
+   {
+    "text": "man king woman queen",
+    "ids": [
+     1562,
+     9615,
+     3875,
+     26476
+    ],
+    "tokens": [
+     "man",
+     "▁king",
+     "▁woman",
+     "▁queen"
+    ],
+    "decoded": "man king woman queen"
+   },
+   {
+    "text": "In 2026 the price rose 7900%.",
+    "ids": [
+     902,
+     236743,
+     236778,
+     236771,
+     236778,
+     236825,
+     506,
+     3385,
+     11076,
+     236743,
+     236832,
+     236819,
+     236771,
+     236771,
+     9525
+    ],
+    "tokens": [
+     "In",
+     "▁",
+     "2",
+     "0",
+     "2",
+     "6",
+     "▁the",
+     "▁price",
+     "▁rose",
+     "▁",
+     "7",
+     "9",
+     "0",
+     "0",
+     "%."
+    ],
+    "decoded": "In 2026 the price rose 7900%."
+   },
+   {
+    "text": "def f(x):\n    return x + 1\n",
+    "ids": [
+     2063,
+     517,
+     236769,
+     236781,
+     1473,
+     107,
+     140,
+     2060,
+     1123,
+     900,
+     236743,
+     236770,
+     107
+    ],
+    "tokens": [
+     "def",
+     "▁f",
+     "(",
+     "x",
+     "):",
+     "\n",
+     "▁▁▁▁",
+     "return",
+     "▁x",
+     "▁+",
+     "▁",
+     "1",
+     "\n"
+    ],
+    "decoded": "def f(x):\n    return x + 1\n"
+   },
+   {
+    "text": "a     b",
+    "ids": [
+     236746,
+     141,
+     236763
+    ],
+    "tokens": [
+     "a",
+     "▁▁▁▁▁",
+     "b"
+    ],
+    "decoded": "a     b"
+   },
+   {
+    "text": "naïve café 🐈",
+    "ids": [
+     1789,
+     238527,
+     560,
+     33443,
+     236743,
+     249160
+    ],
+    "tokens": [
+     "na",
+     "ï",
+     "ve",
+     "▁café",
+     "▁",
+     "🐈"
+    ],
+    "decoded": "naïve café 🐈"
+   },
+   {
+    "text": "antidisestablishmentarianism",
+    "ids": [
+     638,
+     33090,
+     163524,
+     8225,
+     1929
+    ],
+    "tokens": [
+     "ant",
+     "idis",
+     "establishment",
+     "arian",
+     "ism"
+    ],
+    "decoded": "antidisestablishmentarianism"
+   },
+   {
+    "text": "  leading and trailing  ",
+    "ids": [
+     138,
+     26016,
+     532,
+     45330,
+     138
+    ],
+    "tokens": [
+     "▁▁",
+     "leading",
+     "▁and",
+     "▁trailing",
+     "▁▁"
+    ],
+    "decoded": "  leading and trailing  "
+   },
+   {
+    "text": "",
+    "ids": [],
+    "tokens": [],
+    "decoded": ""
+   }
+  ]
+ },
+ "qwen25": {
+  "repo": "Qwen/Qwen2.5-0.5B",
+  "path": "/Users/rethna/.cache/huggingface/hub/models--Qwen--Qwen2.5-0.5B/snapshots/060db6499f32faf8b98477b0a26969ef7d8b9987/tokenizer.json",
+  "vocab_size": 151665,
+  "cases": [
+   {
+    "text": "the cat drinks milk",
+    "ids": [
+     1782,
+     8251,
+     20987,
+     14074
+    ],
+    "tokens": [
+     "the",
+     "Ġcat",
+     "Ġdrinks",
+     "Ġmilk"
+    ],
+    "decoded": "the cat drinks milk"
+   },
+   {
+    "text": "The cat drinks milk.",
+    "ids": [
+     785,
+     8251,
+     20987,
+     14074,
+     13
+    ],
+    "tokens": [
+     "The",
+     "Ġcat",
+     "Ġdrinks",
+     "Ġmilk",
+     "."
+    ],
+    "decoded": "The cat drinks milk."
+   },
+   {
+    "text": "man king woman queen",
+    "ids": [
+     1515,
+     11477,
+     5220,
+     27906
+    ],
+    "tokens": [
+     "man",
+     "Ġking",
+     "Ġwoman",
+     "Ġqueen"
+    ],
+    "decoded": "man king woman queen"
+   },
+   {
+    "text": "In 2026 the price rose 7900%.",
+    "ids": [
+     641,
+     220,
+     17,
+     15,
+     17,
+     21,
+     279,
+     3349,
+     16009,
+     220,
+     22,
+     24,
+     15,
+     15,
+     14360
+    ],
+    "tokens": [
+     "In",
+     "Ġ",
+     "2",
+     "0",
+     "2",
+     "6",
+     "Ġthe",
+     "Ġprice",
+     "Ġrose",
+     "Ġ",
+     "7",
+     "9",
+     "0",
+     "0",
+     "%."
+    ],
+    "decoded": "In 2026 the price rose 7900%."
+   },
+   {
+    "text": "def f(x):\n    return x + 1\n",
+    "ids": [
+     750,
+     282,
+     2075,
+     982,
+     262,
+     470,
+     856,
+     488,
+     220,
+     16,
+     198
+    ],
+    "tokens": [
+     "def",
+     "Ġf",
+     "(x",
+     "):Ċ",
+     "ĠĠĠ",
+     "Ġreturn",
+     "Ġx",
+     "Ġ+",
+     "Ġ",
+     "1",
+     "Ċ"
+    ],
+    "decoded": "def f(x):\n    return x + 1\n"
+   },
+   {
+    "text": "a     b",
+    "ids": [
+     64,
+     257,
+     293
+    ],
+    "tokens": [
+     "a",
+     "ĠĠĠĠ",
+     "Ġb"
+    ],
+    "decoded": "a     b"
+   },
+   {
+    "text": "naïve café 🐈",
+    "ids": [
+     3376,
+     37572,
+     586,
+     51950,
+     11162,
+     238,
+     230
+    ],
+    "tokens": [
+     "na",
+     "Ã¯",
+     "ve",
+     "ĠcafÃ©",
+     "ĠðŁ",
+     "Ĳ",
+     "Ī"
+    ],
+    "decoded": "naïve café 🐈"
+   },
+   {
+    "text": "antidisestablishmentarianism",
+    "ids": [
+     517,
+     84242,
+     33400,
+     478,
+     8821,
+     2142
+    ],
+    "tokens": [
+     "ant",
+     "idis",
+     "establish",
+     "ment",
+     "arian",
+     "ism"
+    ],
+    "decoded": "antidisestablishmentarianism"
+   },
+   {
+    "text": "  leading and trailing  ",
+    "ids": [
+     220,
+     6388,
+     323,
+     27748,
+     256
+    ],
+    "tokens": [
+     "Ġ",
+     "Ġleading",
+     "Ġand",
+     "Ġtrailing",
+     "ĠĠ"
+    ],
+    "decoded": "  leading and trailing  "
+   },
+   {
+    "text": "",
+    "ids": [],
+    "tokens": [],
+    "decoded": ""
+   }
+  ]
+ }
+}

@@ -106,6 +106,29 @@ progress
 last_update
 ```
 
+## Real tokenizers
+
+```@docs
+BPETokenizer
+load_hf_tokenizer
+encode
+decode
+token_strings
+token_id
+token_string
+```
+
+(`vocab_size` works on a tokenizer too; it is documented under Vocabulary.)
+
+## Checkpoints and downloads
+
+```@docs
+hf_download
+safetensors_names
+read_safetensor
+embedding_from_checkpoint
+```
+
 ## Positional encoding
 
 ```@docs

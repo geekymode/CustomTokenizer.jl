@@ -4,7 +4,7 @@
 # package's tokenizer) and once on Gemma 4 sub-word pieces. A word vector in the
 # sub-word run is the mean of the vectors of its pieces.
 #
-#   python experiments/tokenize_corpus.py ../lee_background.cor
+#   julia --project=. experiments/tokenize_corpus.jl ../lee_background.cor
 #   julia --project=docs experiments/subword_vs_word.jl
 
 using CustomTokenizer, CairoMakie, Printf, Random, Statistics, LinearAlgebra

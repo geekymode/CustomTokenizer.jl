@@ -1,6 +1,6 @@
 using CustomTokenizer
 using CustomTokenizer: sigmoid, changed_columns
-using Test, LinearAlgebra, Random, Statistics
+using Test, LinearAlgebra, Random, Statistics, JSON3
 
 const SENTENCES = tokenize(TOY_TEXT)
 const VOCAB = build_vocab(SENTENCES)
@@ -350,6 +350,94 @@ end
     # the two clusters share no words, so they must separate
     @test similarity(m, "apple", "tastes") > similarity(m, "apple", "car")
     @test similarity(m, "car", "drives") > similarity(m, "car", "apple")
+end
+
+@testset "real tokenizers" begin
+    fixture = joinpath(@__DIR__, "fixtures", "tokenizers.json")
+    if !isfile(fixture)
+        @info "no fixtures — run experiments/make_fixtures.py to record them"
+    else
+        fx = JSON3.read(read(fixture, String))
+        checked = 0
+        for (name, spec) in pairs(fx)
+            path = String(spec["path"])
+            if !isfile(path)
+                @info "skipping $name: its tokenizer.json is not on this machine"
+                continue
+            end
+            checked += 1
+            tok = load_hf_tokenizer(path; name = String(name))
+            @test tok isa BPETokenizer
+            @test vocab_size(tok) >= Int(spec["vocab_size"])
+
+            @testset "$name" begin
+                for c in spec["cases"]
+                    text = String(c["text"])
+                    want = Int.(c["ids"])
+                    # ids match the Rust implementation exactly
+                    @test encode(tok, text) == want
+                    # so do the pieces, markers and all
+                    @test token_strings(tok, text) == String.(c["tokens"])
+                    # and decoding gets the text back
+                    @test decode(tok, want) == String(c["decoded"])
+                end
+            end
+
+            # ids and pieces are two views of one table
+            for id in (0, 1, 100, vocab_size(tok) - 1)
+                piece = token_string(tok, id)
+                piece === nothing || @test token_id(tok, piece) == id
+            end
+            @test token_string(tok, vocab_size(tok)) === nothing
+            @test token_id(tok, "\u0000 definitely not a token \u0000") === nothing
+
+            # every text round-trips, including one that needs byte fallback
+            for text in ("the queen wears a crown", "🐈 café", "x" ^ 50, "2026")
+                @test decode(tok, encode(tok, text)) == text
+            end
+        end
+        @test checked >= 1
+    end
+
+    @testset "rejects what it cannot do" begin
+        mktempdir() do dir
+            path = joinpath(dir, "unigram.json")
+            write(path, """{"model": {"type": "Unigram", "vocab": []}}""")
+            @test_throws ArgumentError load_hf_tokenizer(path)
+        end
+    end
+end
+
+@testset "safetensors" begin
+    # build a small file by hand and read it back
+    mktempdir() do dir
+        path = joinpath(dir, "toy.safetensors")
+        data = Float32[1, 2, 3, 4, 5, 6]                    # 2 rows × 3 cols, row-major
+        header = """{"emb":{"dtype":"F32","shape":[2,3],"data_offsets":[0,$(sizeof(data))]}}"""
+        open(path, "w") do io
+            write(io, UInt64(ncodeunits(header)))
+            write(io, header)
+            write(io, data)
+        end
+        @test safetensors_names(path) == ["emb"]
+        M = read_safetensor(path, "emb")
+        @test size(M) == (3, 2)                              # transposed to column-major
+        @test M[:, 1] == Float32[1, 2, 3]
+        @test M[:, 2] == Float32[4, 5, 6]
+        @test_throws KeyError read_safetensor(path, "nope")
+
+        # bfloat16 is the top half of a float32
+        vals = Float32[1.0, -2.5, 0.25, 64.0]
+        bf = UInt16.(reinterpret(UInt32, vals) .>> 16)
+        path2 = joinpath(dir, "bf.safetensors")
+        header2 = """{"w":{"dtype":"BF16","shape":[2,2],"data_offsets":[0,$(sizeof(bf))]}}"""
+        open(path2, "w") do io
+            write(io, UInt64(ncodeunits(header2)))
+            write(io, header2)
+            write(io, bf)
+        end
+        @test vec(read_safetensor(path2, "w")) ≈ vals rtol = 0.01
+    end
 end
 
 @testset "positional encoding" begin

@@ -178,10 +178,10 @@ julia --project=. -i examples/stepping.jl            # one update at a time
 julia --project=docs examples/figures.jl             # write all nine figures
 julia --project=. examples/analogies.jl ../text8 17000000   # train, then ask analogies
 
-python experiments/tokenizer_zoo.py                  # GPT-3/4o/Gemma/Qwen side by side
-python experiments/analogy_tokens.py                 # are the analogy words single tokens?
+julia --project=. experiments/tokenizer_zoo.jl       # GPT-3/4o/Gemma/Qwen side by side
+julia --project=. experiments/analogy_tokens.jl      # are the analogy words single tokens?
 python experiments/fetch_pretrained.py               # download GloVe
-python experiments/extract_llm_embeddings.py         # pull an LLM's embedding table
+julia --project=. experiments/extract_embeddings.jl  # pull an LLM's embedding table
 julia --project=. examples/compare_llm_embeddings.jl # compare all of them
 ```
 

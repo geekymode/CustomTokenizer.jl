@@ -5,7 +5,7 @@
 #
 #   julia --project=. examples/analogies.jl ../text8 17000000      # ours-text8.vec
 #   python experiments/fetch_pretrained.py --words 50000 --dim 50  # glove-50d-50k.vec
-#   python experiments/extract_llm_embeddings.py                   # gemma-3-270m-embeddings.vec
+#   julia --project=. experiments/extract_embeddings.jl            # qwen25-embeddings.vec
 #
 # then:
 #
@@ -18,8 +18,7 @@ results = joinpath(@__DIR__, "..", "experiments", "results")
 candidates = [
     ("ours (text8)",        joinpath(results, "ours-text8.vec")),
     ("GloVe 6B 50d",        joinpath(results, "glove-50d-50k.vec")),
-    ("Gemma 3 270M inputs", joinpath(results, "gemma-3-270m-embeddings.vec")),
-    ("Qwen 2.5 0.5B inputs", joinpath(results, "Qwen2.5-0.5B-embeddings.vec")),
+    ("Qwen 2.5 0.5B inputs", joinpath(results, "qwen25-embeddings.vec")),
 ]
 
 embeddings = Pair{String,Embedding}[]
@@ -88,9 +87,9 @@ for w in ("king", "water", "paris", "computer")
 end
 
 println("""
-A note on reading this: an LLM's input embeddings are not trained to be good
-word vectors. They are the first layer of a stack that adds context at every
-step afterwards, so a word's meaning in that model is spread across the whole
-network rather than living in its row. Expect them to look worse on analogies
-than GloVe, which is trained for exactly this — and treat that as information
-about what the row does, not as a defect.""")
+A note on reading this: an LLM's input embeddings are not trained to be word
+vectors — they are the first layer of a stack that adds context at every step
+afterwards. That makes it tempting to expect them to do badly here, and on this
+question set they do not: Qwen 2.5 0.5B beats both GloVe and a word2vec run,
+while agreeing with neither about which words are neighbours. Its space holds
+the relations without sharing the geometry.""")

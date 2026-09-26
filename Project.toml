@@ -4,10 +4,13 @@ authors = ["word2vec-demo"]
 version = "0.1.0"
 
 [deps]
+Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Unicode = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [weakdeps]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
@@ -16,12 +19,15 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 CustomTokenizerMakieExt = "Makie"
 
 [compat]
+Downloads = "1"
+JSON3 = "1"
 Makie = "0.20, 0.21, 0.22, 0.23, 0.24"
 julia = "1.9"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 
 [targets]
-test = ["Test", "CairoMakie"]
+test = ["Test", "CairoMakie", "JSON3"]

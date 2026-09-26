@@ -78,8 +78,8 @@ up a row of its embedding table for each token id. Those rows can be extracted
 and compared like any others.
 
 ```
-python experiments/extract_llm_embeddings.py                      # Gemma 3 270M
-python experiments/extract_llm_embeddings.py --repo Qwen/Qwen2.5-0.5B
+julia --project=. experiments/extract_embeddings.jl                   # Qwen 2.5 0.5B
+julia --project=. experiments/extract_embeddings.jl gpt2
 ```
 
 The script downloads the checkpoint, reads the embedding tensor with a small
@@ -98,12 +98,23 @@ neighbour_overlap(llm, glove, shared_vocabulary(llm, glove)[1:300]; k = 10)
 `examples/compare_llm_embeddings.jl` does all of that for whichever vector
 files it finds, and prints a per-question table of where the models disagree.
 
-Worth setting expectations before running it: an LLM's input embeddings are not
-trained to be good standalone word vectors. They feed a stack that adds context
-at every layer, so a word's meaning in that model is spread across the network
-rather than living in its row. They usually score *worse* on analogies than
-GloVe, which is trained for exactly this task — that is information about what
-the row does, not a defect.
+It is tempting to assume these rows must be poor word vectors, since they are
+not trained to be any such thing — they feed a stack that adds context at every
+layer. Measured, that assumption is wrong:
+
+| | rank 1 | top 4 |
+|---|---|---|
+| ours (text8, 17M words) | 7/12 | 9/12 |
+| GloVe (6B words, 50d) | 9/12 | 12/12 |
+| **Qwen 2.5 0.5B input embeddings (896d)** | **11/12** | 11/12 |
+
+The only one Qwen misses is `france → paris as italy → ?`, where it answers
+`italian`. Its neighbour lists are clean too: `king → queen, kings, kingdom,
+prince, monarch`.
+
+What it does *not* share is geometry. Neighbour overlap against GloVe is 16%
+and the similarity correlation is ≈0 — the space is arranged quite differently,
+while still holding the same relations.
 
 Which words are single tokens matters here, and differs by model:
 
@@ -114,7 +125,7 @@ Which words are single tokens matters here, and differs by model:
 | germany/berlin/japan/tokyo | no | no | no | yes |
 
 GPT-3 splits `paris` into `par|is` and `rome` into `r|ome`, so a model on that
-tokenizer has no single row for either. `python experiments/analogy_tokens.py`
+tokenizer has no single row for either. `experiments/analogy_tokens.jl`
 prints the full table.
 
 ## Comparing two models

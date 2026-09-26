@@ -2,30 +2,54 @@
 
 [`tokenize`](@ref) in this package is the simplest thing that works: lowercase,
 letters only, split at full stops. Real models use reversible sub-word
-tokenizers. The scripts in `experiments/` download the real ones — only the
-tokenizer files, a few MB, never the model weights — and measure the
-difference.
+tokenizers, and those can be loaded and run from Julia directly — only the
+tokenizer files are needed, a few MB each, never the model weights.
+
+## Loading a real tokenizer
+
+```julia
+using CustomTokenizer
+
+gemma = load_hf_tokenizer(hf_download("google/gemma-4-E2B", "tokenizer.json"))
+gpt3  = load_hf_tokenizer(hf_download("gpt2", "tokenizer.json"))     # = r50k_base
+
+encode(gemma, "the cat drinks milk")          # [818, 3811, 40740, 12558]
+token_strings(gemma, "the cat drinks milk")   # ["the", "▁cat", "▁drinks", "▁milk"]
+decode(gemma, encode(gemma, "the cat drinks milk"))
+```
+
+[`load_hf_tokenizer`](@ref) reads the vocabulary and merge list out of a
+`tokenizer.json` and reproduces the reference implementation exactly — the test
+suite checks ids, pieces and decoded text against output recorded from Hugging
+Face's Rust tokenizers, for GPT-2, Gemma 4 and Qwen 2.5.
+
+What differs between them is what happens around the merges: whether bytes are
+mapped to glyphs (GPT-2, Qwen) or spaces rewritten as `▁` (Gemma), whether text
+is cut by a regex first, and what is done with characters the vocabulary lacks.
+[`BPETokenizer`](@ref) keeps those as flags.
 
 ```
-pip install tiktoken tokenizers huggingface_hub
-python experiments/tokenizer_zoo.py
-julia --project=docs experiments/tokenizer_plots.jl
+julia --project=. experiments/tokenizer_zoo.jl      # the tables below
+julia --project=. experiments/analogy_tokens.jl     # single-token analysis
 ```
 
 ## How the same text is cut up
 
 Tokens needed for the same sentence in several languages:
 
-| text | GPT-3 | GPT-3.5/4 | GPT-4o | Gemma 4 | Qwen 2.5 |
-|---|---|---|---|---|---|
-| english | 14 | 14 | 14 | 15 | 14 |
-| german | 26 | 20 | 15 | 16 | 19 |
-| hindi | **91** | 58 | 20 | **19** | 53 |
-| chinese | 39 | 31 | 19 | 16 | 14 |
-| code | 50 | 31 | 31 | 36 | 31 |
-| numbers | 24 | 27 | 27 | **39** | 38 |
+| text | GPT-3 | Gemma 4 | Gemma 2 | Qwen 2.5 |
+|---|---|---|---|---|
+| english | 14 | 14 | 14 | 14 |
+| german | 26 | 15 | 13 | 19 |
+| hindi | **91** | **18** | 22 | 53 |
+| chinese | 39 | 15 | 15 | 14 |
+| code | 50 | 35 | 35 | 31 |
+| numbers | 24 | **38** | 38 | 38 |
 
-The same Hindi sentence costs 91 tokens on GPT-3 and 19 on Gemma 4 — a 4.8×
+(counted without the automatic `<bos>`, which Gemma adds when asked for special
+tokens — worth knowing, because it silently shifts every count by one.)
+
+The same Hindi sentence costs 91 tokens on GPT-3 and 18 on Gemma 4 — a 5×
 difference in price and context for identical content, while English is 14
 everywhere. Gemma spends more on numbers because it splits every digit:
 `2026` → `2 0 2 6`, which keeps arithmetic uniform at the cost of length.
@@ -39,7 +63,7 @@ code sample costs GPT-3 50 tokens and everyone else about 31.
 
 ## Does the tokenizer change the vectors?
 
-`experiments/tokenize_corpus.py` tokenizes one corpus two ways — whole words,
+`experiments/tokenize_corpus.jl` tokenizes one corpus two ways — whole words,
 and Gemma 4 sub-word pieces — and `experiments/subword_vs_word.jl` trains the
 same model on each. Both streams are lowercased, so the only variable is the
 unit.

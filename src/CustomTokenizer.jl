@@ -27,7 +27,8 @@ nearest_neighbours(model, "cat", 3)    # dog, mouse, milk
 """
 module CustomTokenizer
 
-using LinearAlgebra, Printf, Random, Statistics
+using LinearAlgebra, Printf, Random, Statistics, Downloads, Unicode
+using JSON3
 
 # corpus and vocabulary
 export TOY_TEXT, tokenize, Vocabulary, build_vocab, vocab_size, haskey_word,
@@ -38,6 +39,13 @@ export context_pairs, corpus_pairs, cooccurrence, row_totals, pair_count
 
 # embeddings: trained here, or loaded from a file
 export AbstractEmbedding, Embedding, embedding, load_vectors, save_vectors
+
+# real tokenizers, read from a Hugging Face tokenizer.json
+export BPETokenizer, load_hf_tokenizer, encode, decode, token_strings, token_id,
+       token_string, vocab_size
+
+# checkpoints and downloads
+export safetensors_names, read_safetensor, hf_download, embedding_from_checkpoint
 
 # comparing two embeddings
 export shared_vocabulary, neighbour_overlap, similarity_agreement,
@@ -78,6 +86,8 @@ include("model.jl")
 include("sampling.jl")
 include("train.jl")
 include("stepping.jl")
+include("tokenizer.jl")
+include("safetensors.jl")
 include("positional.jl")
 include("analysis.jl")
 include("compare.jl")
