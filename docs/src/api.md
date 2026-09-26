@@ -155,6 +155,17 @@ alibi_halflife
 alibi_decay
 ```
 
+### Binary codes, for comparison
+
+```@docs
+binary_encoding
+binary_wavelengths
+hamming_matrix
+pairs_per_octave
+binary_equivalent_base
+sinusoidal_range
+```
+
 ## Analysis
 
 ```@docs
@@ -186,4 +197,5 @@ plot_gap_kernel
 plot_rope_geometry
 plot_alibi_kernel
 plot_bipartite_attention
+plot_binary_analogy
 ```

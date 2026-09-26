@@ -12,7 +12,7 @@ for f in (:plot_tables, :plot_update, :plot_loss, :plot_similarity_matrix,
           :plot_cooccurrence, :plot_embedding_map, :plot_evolution,
           :plot_positional_encoding, :plot_position_decay,
           :plot_frequency_ladder, :plot_gap_kernel, :plot_rope_geometry,
-          :plot_alibi_kernel, :plot_bipartite_attention)
+          :plot_alibi_kernel, :plot_bipartite_attention, :plot_binary_analogy)
     @eval begin
         function $f(args...; kwargs...)
             error($_PLOT_HINT)
@@ -160,3 +160,20 @@ is drawn, since a token cannot attend to its future.
 
 Requires a Makie backend.
 """ plot_bipartite_attention
+
+@doc """
+    plot_binary_analogy(; dim=8, len=64, base=10000.0, ladder_dim=64)
+
+Six panels comparing a binary counter with a sinusoidal encoding.
+
+Top row: the codes themselves — plain binary, reflected Gray, and sinusoidal —
+all showing the same geometric ladder of frequencies, square waves against
+sines. Bottom row: what each says about *distance*. The binary Hamming matrix
+is a self-similar block pattern that is not constant along its diagonals; the
+sinusoidal similarity matrix is a clean band, because its score depends on the
+gap alone. The last panel puts the two wavelength ladders side by side at a realistic
+width (`ladder_dim`, 32 channels each), rather than at the small `dim` used to
+keep the code panels legible.
+
+Requires a Makie backend.
+""" plot_binary_analogy

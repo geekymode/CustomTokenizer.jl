@@ -6,7 +6,8 @@ using CustomTokenizer: Model, UpdateInfo, TrainLog, Vocabulary, pca2,
                            sinusoidal_encoding, position_similarity, rope_similarity,
                            alibi_slopes, sinusoidal_frequencies, sinusoidal_wavelengths,
                            sinusoidal_gap_score, sinusoidal_gap_envelope, rope_channels,
-                           alibi_halflife, alibi_decay, rope
+                           alibi_halflife, alibi_decay, rope, binary_encoding,
+                           binary_wavelengths, hamming_matrix, pairs_per_octave
 using Makie
 using LinearAlgebra, Printf, Random, Statistics
 
@@ -419,6 +420,53 @@ function CustomTokenizer.plot_bipartite_attention(; heads = (1, 6), nheads = 8, 
         end
         limits!(ax, -1.6, len + 0.6, -0.35, 1.35)
     end
+    fig
+end
+
+function CustomTokenizer.plot_binary_analogy(; dim = 8, len = 64, base = 10_000.0,
+                                             ladder_dim = 64, figure = (;))
+    B = binary_encoding(dim, len)
+    G = binary_encoding(dim, len; gray = true)
+    P = sinusoidal_encoding(dim, len; base = base)
+    fig = Figure(; size = (1150, 640), figure...)
+
+    function codepanel(pos, M, title; two_tone = true)
+        ax = Axis(fig[pos...]; title = title, titlealign = :left, yreversed = true,
+                  xlabel = "position", ylabel = "channel")
+        heatmap!(ax, 1:size(M, 2), 1:size(M, 1), permutedims(M);
+                 colormap = two_tone ? :binary : :viridis,
+                 colorrange = two_tone ? (0, 1) : (-1, 1))
+        ax
+    end
+    codepanel((1, 1), B, "binary: bit k is a square wave of period 2ᵏ⁺¹")
+    codepanel((1, 2), G, "Gray: neighbours always differ in one bit")
+    codepanel((1, 3), P, "sinusoidal: the same ladder, smoothed"; two_tone = false)
+
+    H = hamming_matrix(B)
+    ax4 = Axis(fig[2, 1]; title = "binary distance: not constant along diagonals",
+               titlealign = :left, xlabel = "position", ylabel = "position",
+               yreversed = true)
+    heatmap!(ax4, 1:len, 1:len, permutedims(H); colormap = :magma)
+
+    S = position_similarity(P)
+    ax5 = Axis(fig[2, 2]; title = "sinusoidal similarity: a band (Toeplitz)",
+               titlealign = :left, xlabel = "position", ylabel = "position",
+               yreversed = true)
+    heatmap!(ax5, 1:len, 1:len, permutedims(S); colormap = :viridis)
+
+    # the ladder panel uses a production width, not the small display width:
+    # 32 channels each, which is what the real comparison looks like
+    nch = ladder_dim ÷ 2
+    ax6 = Axis(fig[2, 3]; yscale = log10, xlabel = "channel", ylabel = "wavelength",
+               title = @sprintf("%d channels each: %.2f pairs per octave vs 1",
+                                nch, pairs_per_octave(ladder_dim; base = base)),
+               titlealign = :left)
+    scatterlines!(ax6, 1:nch, binary_wavelengths(nch); color = CTX_EDGE, markersize = 6,
+                  label = @sprintf("binary bits (reach 2^%d)", nch))
+    λ = 2π ./ [base^(-2i / ladder_dim) for i in 0:(nch - 1)]
+    scatterlines!(ax6, 1:nch, λ; color = ANIMAL, markersize = 6,
+                  label = @sprintf("sinusoidal pairs (reach %.0f)", maximum(λ)))
+    axislegend(ax6; position = :lt, framevisible = false, labelsize = 9)
     fig
 end
 

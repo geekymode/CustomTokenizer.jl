@@ -207,6 +207,144 @@ picture is a high-dimensional limit.
 plot_gap_kernel(dim = 64, len = 2000)
 ```
 
+## Binary digits: the same idea, one century earlier
+
+There is an older positional code that everyone already knows, and holding it
+next to the sinusoidal one explains most of the design choices.
+
+Write the position in binary. Bit `k` of `p` is `(p >> k) & 1`, which as `p`
+advances is a **square wave of period ``2^{k+1}``**:
+
+```@example pos
+Int.(binary_encoding(5, 16))
+```
+
+The bottom row flips every position, the next every two, the next every four.
+That is a geometric ladder of frequencies — exactly the structure of the
+sinusoidal encoding. [`binary_encoding`](@ref) builds it, and
+[`binary_wavelengths`](@ref) lists the periods.
+
+So the two schemes are the same idea with three substitutions:
+
+| | binary counter | sinusoidal |
+|---|---|---|
+| waveform | square | sine and cosine |
+| values | ``\{0, 1\}`` | continuous in ``[-1, 1]`` |
+| ratio between channels | exactly 2 | ``base^{2/d}`` |
+| channels per scale | 1 bit | 2 numbers (a sin/cos pair) |
+
+### How dense is the ladder?
+
+Binary spends exactly one channel per octave of distance. A sinusoidal encoding
+spends [`pairs_per_octave`](@ref) ``= (d/2)/\log_2 base``:
+
+```@example pos
+(binary = 1.0, sinusoidal = round(pairs_per_octave(64; base = 10_000.0), digits = 2))
+```
+
+At the conventional settings it is 2.41 — a **finer** ladder than binary, with
+roughly two and a half pairs covering each doubling of distance. Going the
+other way, [`binary_equivalent_base`](@ref) gives the base at which the
+sinusoidal ladder would coincide with a binary counter, one pair per octave:
+
+```@example pos
+binary_equivalent_base(64)          # = 2^32
+```
+
+Four billion, against the conventional ten thousand. The usual encoding is
+nowhere near as spread out as a binary counter of the same width.
+
+### Where the analogy pays off: range versus resolution
+
+This is the part worth carrying away. A binary code of width ``d``
+distinguishes ``2^d`` positions, so **width buys range, exponentially**. A
+sinusoidal code cannot do that. Its reach is the slowest wavelength,
+``2\pi\,base^{(d-2)/d}``, which tends to ``2\pi\,base`` — set by the base, not
+by the width ([`sinusoidal_range`](@ref)):
+
+```@example pos
+[(dim, binary = 2.0^dim, sinusoidal = round(sinusoidal_range(dim))) for dim in (16, 64, 256)]
+```
+
+Sixteenfold more dimensions moves the reach from 19,869 to 58,470 and no
+further, while the binary counter goes from ``10^4`` to ``10^{77}``. In a
+sinusoidal scheme, **extra width buys resolution and redundancy; only the base
+buys reach.**
+
+Which is exactly what practitioners do. Extending a model's context means
+raising the base, not widening the model — Llama 3 moved from 10,000 to
+500,000:
+
+```@example pos
+[(base, round(sinusoidal_range(64; base = base))) for base in (10_000.0, 500_000.0, 1e6)]
+```
+
+### Where the analogy breaks, and why it had to
+
+A binary counter would be a terrible positional encoding, and the reason is
+precise. Ask what the code says about the *distance* between two positions.
+
+For the sinusoidal encoding the answer depends on the gap and nothing else —
+the score is ``S(p-q)``, the similarity matrix is Toeplitz. For a binary
+counter it is not even close. [`hamming_matrix`](@ref) counts disagreeing bits:
+
+```@example pos
+H = hamming_matrix(binary_encoding(8, 64))
+[(p, "$p → $(p+1)", H[p+1, p+2]) for p in (0, 1, 3, 7, 15, 31)]
+```
+
+Every one of those is a gap of **one**, and the distance runs 1, 2, 3, 4, 5, 6.
+Position 31 and position 32 are adjacent in the text and maximally far apart in
+the code, because a carry ripples through every bit. There is no shift theorem:
+incrementing a counter is not a rotation.
+
+The reflected Gray code, `p ⊻ (p >> 1)`, fixes the neighbour problem —
+consecutive codes differ in exactly one bit — but not the underlying one:
+
+```@example pos
+G = binary_encoding(8, 64; gray = true)
+HG = hamming_matrix(G)
+(gray_neighbours = unique(HG[p+1, p+2] for p in 0:62),
+ depends_on_gap_alone = all(HG[p+1, p+1+g] == HG[1, 1+g] for g in 1:20 for p in 0:(62-g)))
+```
+
+One bit between every pair of neighbours, and still no function of the gap. In
+fact Hamming distance barely tracks distance at all — over the first 256
+positions the correlation between the two is only about 0.32, for both codes.
+
+```@example pos
+plot_binary_analogy(dim = 8, len = 64)
+```
+
+The bottom-left panel is the indictment: a self-similar block pattern, bright
+squares where a high bit flips, nothing constant along the diagonals. Next to
+it the sinusoidal similarity is a plain band. Same ladder of frequencies,
+completely different geometry.
+
+### Why a pair, and not just a sine
+
+The table above lists one more difference: binary spends one number per scale,
+sinusoidal spends two. The cosine is not redundant padding — it is what makes
+translation linear.
+
+With both, the shift is exact ([`shift_operator`](@ref)). With the cosines
+thrown away, no linear map from the sines at ``p`` to the sines at ``p+k``
+exists, because ``\sin`` is two-to-one on a period: two positions can share a
+sine and have different successors. Least squares confirms there is nothing to
+find:
+
+```@example pos
+Pp = sinusoidal_encoding(8, 40)
+sines = Pp[1:2:end, :]
+A = sines[:, 4:39] / sines[:, 1:36]                       # best linear map p → p+3
+(with_pairs  = maximum(norm(shift_operator(8, 3) * Pp[:, p+1] - Pp[:, p+4]) for p in 0:35),
+ sines_only  = round(norm(A * sines[:, 1:36] - sines[:, 4:39]) /
+                     norm(sines[:, 4:39]); digits = 3))
+```
+
+Machine zero against a 10% residual. A point on a circle has a well-defined
+angle and can be turned; a single number on a line cannot.
+
 ## A learned table
 
 [`learned_positions`](@ref) is the other classic: one column per position,

@@ -612,6 +612,56 @@ end
         @test_throws DimensionMismatch rope_channels(q, k[1:8])
     end
 
+    @testset "binary codes, and where the analogy breaks" begin
+        B = binary_encoding(5, 16)
+        @test size(B) == (5, 16)
+        @test all(x -> x in (0.0, 1.0), B)
+        @test B[:, 1] == zeros(5)                                     # position 0
+        @test all(Int(B[k + 1, q + 1]) == (q >> k) & 1 for k in 0:4, q in 0:15)
+        # bit k is a square wave of period 2^(k+1)
+        for k in 0:3
+            row = B[k + 1, :]
+            @test all(row[p + 1] == row[p + 1 + 2^(k + 1)] for p in 0:(15 - 2^(k + 1)))
+        end
+        @test binary_wavelengths(5) == [2.0, 4, 8, 16, 32]
+        @test all(x -> x in (-1.0, 1.0), binary_encoding(4, 8; bipolar = true))
+        @test_throws ArgumentError binary_encoding(0, 4)
+
+        # Gray code: consecutive positions differ in exactly one bit
+        G = binary_encoding(8, 64; gray = true)
+        HG = hamming_matrix(G)
+        @test all(HG[p + 1, p + 2] == 1 for p in 0:62)
+        H = hamming_matrix(binary_encoding(8, 64))
+        @test [H[p + 1, p + 2] for p in (0, 1, 3, 7, 15, 31)] == [1, 2, 3, 4, 5, 6]
+
+        # neither is a function of the gap alone — no shift theorem
+        @test !all(H[p + 1, p + 1 + g] == H[1, 1 + g] for g in 1:20 for p in 0:(62 - g))
+        @test !all(HG[p + 1, p + 1 + g] == HG[1, 1 + g] for g in 1:20 for p in 0:(62 - g))
+        # whereas the sinusoidal score is exactly that
+        P = sinusoidal_encoding(64, 64)
+        S = sinusoidal_gap_score(64, 0:63)
+        @test all(dot(P[:, p + 1], P[:, q + 1]) ≈ S[abs(p - q) + 1] for p in 0:63, q in 0:63)
+
+        @test hamming_matrix(B) == hamming_matrix(B)'                 # symmetric
+        @test all(hamming_matrix(B)[i, i] == 0 for i in 1:16)
+    end
+
+    @testset "how the two ladders compare" begin
+        @test pairs_per_octave(64; base = 10_000.0) ≈ 32 / log2(10_000)
+        @test round(pairs_per_octave(64); digits = 2) == 2.41
+        # at the binary-equivalent base the ladder is exactly one pair per octave
+        @test binary_equivalent_base(64) == 2.0^32
+        @test pairs_per_octave(64; base = binary_equivalent_base(64)) ≈ 1
+        λ = sinusoidal_wavelengths(64; base = binary_equivalent_base(64))
+        @test all(λ[i + 1] / λ[i] ≈ 2 for i in 1:(length(λ) - 1))     # doubling, like bits
+
+        # reach is set by the base, not the width
+        @test sinusoidal_range(64) ≈ maximum(sinusoidal_wavelengths(64))
+        @test sinusoidal_range(256) < 2π * 10_000
+        @test sinusoidal_range(256) / sinusoidal_range(16) < 3        # barely moves
+        @test sinusoidal_range(64; base = 500_000.0) > 2_000_000      # but the base does
+    end
+
     @testset "ALiBi is a geometric discount" begin
         slopes = alibi_slopes(8)
         half = alibi_halflife(8)
@@ -725,6 +775,7 @@ end
     @test plot_alibi_kernel(; nheads = 4, len = 64) isa Figure
     @test plot_alibi_kernel(; nheads = 1, len = 16) isa Figure          # no division by zero
     @test plot_bipartite_attention(; heads = (1, 3), nheads = 4, len = 6) isa Figure
+    @test plot_binary_analogy(; dim = 6, len = 32, ladder_dim = 32) isa Figure
 
     # a figure really does render
     mktempdir() do dir

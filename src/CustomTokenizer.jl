@@ -70,7 +70,8 @@ export sinusoidal_encoding, learned_positions, rope, alibi_slopes, alibi_bias,
        position_similarity, rope_similarity, sinusoidal_frequencies,
        sinusoidal_wavelengths, sinusoidal_gap_score, sinusoidal_gap_envelope,
        shift_operator, rotation_operator, rope_channels, alibi_halflife,
-       alibi_decay
+       alibi_decay, binary_encoding, binary_wavelengths, hamming_matrix,
+       pairs_per_octave, binary_equivalent_base, sinusoidal_range
 
 # analysis
 export target_probability, target_matrix, calibration, similarity_matrix, pca2,
@@ -81,7 +82,7 @@ export plot_tables, plot_update, plot_loss, plot_similarity_matrix,
        plot_cooccurrence, plot_embedding_map, plot_evolution,
        plot_positional_encoding, plot_position_decay, plot_frequency_ladder,
        plot_gap_kernel, plot_rope_geometry, plot_alibi_kernel,
-       plot_bipartite_attention
+       plot_bipartite_attention, plot_binary_analogy
 
 include("vocab.jl")
 include("corpus.jl")

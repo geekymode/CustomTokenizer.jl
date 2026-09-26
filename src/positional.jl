@@ -398,3 +398,125 @@ function alibi_decay(nheads::Integer, len::Integer)
     slopes = alibi_slopes(nheads)
     [exp(-slopes[h] * d) for d in 0:(len - 1), h in 1:nheads]
 end
+
+# ---------------------------------------------------------------- binary codes
+"""
+    binary_encoding(dim, len; gray=false, bipolar=false) -> Matrix (dim × len)
+
+The oldest positional code there is: write the position in binary, one bit per
+row. Row `k` holds bit `k-1` of each position, which is a **square wave of
+period 2^k** — so the rows form a geometric ladder of frequencies, exactly like
+[`sinusoidal_encoding`](@ref) but with a ratio of exactly 2 and square waves in
+place of sines.
+
+With `gray = true` the reflected Gray code `p ⊻ (p >> 1)` is used instead, which
+fixes plain binary's worst property: consecutive Gray codes differ in exactly
+one bit, where consecutive binary codes can differ in many (7 → 8 flips four).
+
+With `bipolar = true` the bits are ±1 rather than 0/1, which makes dot products
+between columns meaningful.
+
+See [`hamming_matrix`](@ref) for the property that separates these from the
+sinusoidal encoding, and the "Binary digits" section of the manual for the
+comparison in full.
+
+```jldoctest
+julia> Int.(binary_encoding(4, 8))
+4×8 Matrix{Int64}:
+ 0  1  0  1  0  1  0  1
+ 0  0  1  1  0  0  1  1
+ 0  0  0  0  1  1  1  1
+ 0  0  0  0  0  0  0  0
+```
+"""
+function binary_encoding(dim::Integer, len::Integer; gray::Bool = false,
+                         bipolar::Bool = false)
+    dim >= 1 || throw(ArgumentError("dim must be positive, got $dim"))
+    B = zeros(Float64, dim, len)
+    for p in 0:(len - 1)
+        code = gray ? p ⊻ (p >> 1) : p
+        for k in 0:(dim - 1)
+            b = (code >> k) & 1
+            B[k + 1, p + 1] = bipolar ? 2b - 1 : b
+        end
+    end
+    B
+end
+
+"""
+    binary_wavelengths(dim) -> Vector
+
+The period of each bit of a binary counter: `2, 4, 8, …, 2^dim`. The direct
+counterpart of [`sinusoidal_wavelengths`](@ref), and the comparison is the
+point — binary spends exactly one channel per octave of distance, while a
+sinusoidal encoding at `base = 10000, d = 64` spends about 2.4
+([`pairs_per_octave`](@ref)).
+"""
+binary_wavelengths(dim::Integer) = [2.0^k for k in 1:dim]
+
+"""
+    hamming_matrix(B) -> Matrix{Int}
+
+Hamming distance between every pair of columns of a bit matrix — how many bits
+two positions disagree in.
+
+This is where the analogy with sinusoidal encoding breaks, and the break is
+instructive. For a sinusoidal encoding the score between two columns depends on
+the gap alone, so [`position_similarity`](@ref) is Toeplitz. For a binary code
+it does not: at a gap of one, the distance is 1 between 0 and 1, but 4 between
+7 and 8 and 6 between 31 and 32. A binary counter has no shift theorem, because
+carrying is not a rotation.
+"""
+function hamming_matrix(B::AbstractMatrix)
+    n = size(B, 2)
+    mid = (maximum(B) + minimum(B)) / 2
+    bits = B .> mid
+    [count(bits[:, i] .⊻ bits[:, j]) for i in 1:n, j in 1:n]
+end
+
+"""
+    pairs_per_octave(dim; base=10000.0) -> Float64
+
+How many sinusoidal coordinate pairs are spent on each doubling of distance:
+`(dim/2) / log2(base)`.
+
+Binary uses exactly one channel per octave. At `dim = 64, base = 10000` a
+sinusoidal encoding uses 2.41 — it is a *finer-grained* version of the same
+idea, trading range for resolution. Below 1 the code is coarser than binary and
+skips octaves.
+"""
+pairs_per_octave(dim::Integer; base::Real = 10_000.0) = (dim / 2) / log2(base)
+
+"""
+    binary_equivalent_base(dim) -> Float64
+
+The `base` at which a sinusoidal encoding of width `dim` lays its wavelengths
+out exactly like a binary counter — one pair per octave, each twice as slow as
+the last. Since the ratio between neighbouring pairs is `base^(2/dim)`, setting
+that to 2 gives `base = 2^(dim/2)`: about 4.3e9 at `dim = 64`, against the
+conventional 10000.
+
+The usual base is therefore far *denser* than binary, covering only
+`log2(base) ≈ 13.3` octaves with 32 pairs instead of 32 octaves.
+"""
+binary_equivalent_base(dim::Integer) = 2.0^(dim / 2)
+
+"""
+    sinusoidal_range(dim; base=10000.0) -> Float64
+
+The slowest wavelength in the encoding, `2π·base^{(dim-2)/dim}` — the distance
+past which even the slowest clock has wrapped and positions start to repeat
+themselves.
+
+The surprise is what this does *not* depend on. A binary code of width `dim`
+distinguishes `2^dim` positions, so range grows exponentially with width. A
+sinusoidal code's range is set almost entirely by `base`: at `base = 10000` it
+is about 47,000 positions whether `dim` is 16, 64 or 256. Extra width buys
+resolution and redundancy, not reach.
+
+That is why long-context models raise the base rather than widen the model —
+Llama 3 moved to 500,000, which pushes the slowest wavelength beyond two
+million positions.
+"""
+sinusoidal_range(dim::Integer; base::Real = 10_000.0) =
+    maximum(sinusoidal_wavelengths(dim; base = base))
