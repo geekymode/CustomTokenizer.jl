@@ -187,3 +187,214 @@ function rope_similarity(dim::Integer, len::Integer; base::Real = 10_000.0,
     [mean(dot(rope(v, 0; base = base), rope(v, gap; base = base)) for v in vs)
      for gap in 0:(len - 1)]
 end
+
+# ---------------------------------------------------------------- the clocks
+"""
+    sinusoidal_frequencies(dim; base=10000.0) -> Vector
+
+The angular frequencies ``\\theta_i = base^{-2i/dim}`` behind both
+[`sinusoidal_encoding`](@ref) and [`rope`](@ref) — one per coordinate *pair*,
+so `dim ÷ 2` of them. They form a geometric progression from 1 down to
+`1/base`, which is what makes the scheme scale-free: each pair covers its own
+octave of distance.
+"""
+function sinusoidal_frequencies(dim::Integer; base::Real = 10_000.0)
+    iseven(dim) || throw(ArgumentError("dim must be even, got $dim"))
+    [base^(-2i / dim) for i in 0:(dim ÷ 2 - 1)]
+end
+
+"""
+    sinusoidal_wavelengths(dim; base=10000.0) -> Vector
+
+How many positions each pair takes to come back round: ``\\lambda_i =
+2\\pi/\\theta_i``. At `dim = 64, base = 10000` these run from 6.3 positions to
+about 47,000 — the fast pairs resolve neighbours, the slow ones place a token
+in the document.
+
+A pair is only informative while `gap < λ/2`; past that it has wrapped and its
+reading is ambiguous, exactly like the hour hand of a clock at 13:00.
+"""
+sinusoidal_wavelengths(dim::Integer; base::Real = 10_000.0) =
+    2π ./ sinusoidal_frequencies(dim; base = base)
+
+"""
+    sinusoidal_gap_score(dim, gaps; base=10000.0) -> Vector
+
+The exact similarity kernel of the sinusoidal encoding:
+
+```math
+S(g) \\;=\\; PE[:,p] \\cdot PE[:,p+g] \\;=\\; \\sum_i \\cos(g\\,\\theta_i)
+```
+
+The absolute position cancels — the two columns' dot product depends on the
+gap alone, so the similarity matrix is Toeplitz (constant along diagonals).
+
+Worth knowing before trusting the usual picture: `S` is **not** a clean
+monotone decay. It is a sum of `dim ÷ 2` cosines at geometrically spaced
+frequencies, so past the first few positions it oscillates. At `dim = 64` it
+decreases only out to a gap of about 6, and beyond gap 500 it wanders between
+roughly −6 and +13 against a peak of `S(0) = 32`. The smooth curve everyone
+draws is a large-dimension limit; see [`sinusoidal_gap_envelope`](@ref).
+
+```jldoctest
+julia> round.(sinusoidal_gap_score(64, [0, 1, 2]); digits = 3)
+3-element Vector{Float64}:
+ 32.0
+ 30.917
+ 28.304
+```
+"""
+function sinusoidal_gap_score(dim::Integer, gaps; base::Real = 10_000.0)
+    θ = sinusoidal_frequencies(dim; base = base)
+    [sum(cos(g * t) for t in θ) for g in gaps]
+end
+
+"""
+    sinusoidal_gap_envelope(dim, gaps; base=10000.0) -> Vector
+
+The smooth approximation to [`sinusoidal_gap_score`](@ref), obtained by
+treating the sum over pairs as an integral:
+
+```math
+S(g) \\;\\approx\\; \\frac{dim}{2}\\left(1 - \\frac{\\gamma + \\ln g}{\\ln base}\\right)
+```
+
+so the similarity is predicted to fall **logarithmically** in the gap — equal
+loss per octave of distance, which is the sense in which the encoding is
+scale-free.
+
+It is an asymptotic in the dimension, and a mediocre one at the sizes actually
+used. Mean relative error over gaps 10–1000: 0.105 at `dim = 32`, 0.066 at 64,
+0.024 at 256, 0.007 at 1024, and 0.000 by 4096. Use it as the envelope of the
+true kernel, never as a substitute for it.
+"""
+function sinusoidal_gap_envelope(dim::Integer, gaps; base::Real = 10_000.0)
+    γ = 0.5772156649015329          # Euler–Mascheroni
+    [g <= 0 ? dim / 2 : (dim / 2) * (1 - (γ + log(g)) / log(base)) for g in gaps]
+end
+
+"""
+    shift_operator(dim, k; base=10000.0) -> Matrix (dim × dim)
+
+The matrix `R` with `R * PE[:, p] == PE[:, p + k]` for **every** `p`, where
+`PE` is a [`sinusoidal_encoding`](@ref). Translating a position is a fixed
+linear map — that is the whole reason the encoding is useful, and it follows
+from the angle-addition formulas:
+
+```math
+\\sin((p+k)\\theta) = \\sin p\\theta \\cos k\\theta + \\cos p\\theta \\sin k\\theta, \\qquad
+\\cos((p+k)\\theta) = \\cos p\\theta \\cos k\\theta - \\sin p\\theta \\sin k\\theta
+```
+
+`R` is block-diagonal with one 2×2 block per pair and is orthogonal, so the
+shift is a rotation: it moves a column around the torus without changing its
+length.
+
+Rows here are ordered `(sin, cos)`, which puts the block in the form
+`[cos kθ  sin kθ; −sin kθ  cos kθ]`.
+"""
+function shift_operator(dim::Integer, k::Integer; base::Real = 10_000.0)
+    θ = sinusoidal_frequencies(dim; base = base)
+    R = zeros(Float64, dim, dim)
+    for (j, t) in enumerate(θ)
+        i = j - 1
+        c, s = cos(k * t), sin(k * t)
+        R[2i + 1, 2i + 1] =  c;  R[2i + 1, 2i + 2] = s
+        R[2i + 2, 2i + 1] = -s;  R[2i + 2, 2i + 2] = c
+    end
+    R
+end
+
+"""
+    rotation_operator(dim, p; base=10000.0) -> Matrix (dim × dim)
+
+RoPE's rotation `R(p)` written out as a matrix, so the algebra can be checked
+rather than taken on trust. `rotation_operator(dim, p) * x == rope(x, p)`.
+
+`R` is a *representation of the integers under addition*: `R(a)R(b) = R(a+b)`
+and `R(a)' == R(-a)`, every `R(p)` orthogonal. Those two lines are the entire
+justification for RoPE, because they give
+
+```math
+\\langle R(m)q,\\; R(n)k \\rangle = q^{\\!\\top} R(m)^{\\!\\top} R(n) k
+  = q^{\\!\\top} R(n-m) k
+```
+
+— the score depends on `n - m` and nothing else.
+"""
+function rotation_operator(dim::Integer, p::Integer; base::Real = 10_000.0)
+    θ = sinusoidal_frequencies(dim; base = base)
+    R = zeros(Float64, dim, dim)
+    for (j, t) in enumerate(θ)
+        i = j - 1
+        c, s = cos(p * t), sin(p * t)
+        R[2i + 1, 2i + 1] = c;  R[2i + 1, 2i + 2] = -s
+        R[2i + 2, 2i + 1] = s;  R[2i + 2, 2i + 2] =  c
+    end
+    R
+end
+
+"""
+    rope_channels(q, k; base=10000.0) -> (amplitude, phase, frequency)
+
+Decomposes a RoPE attention score into one cosine per coordinate pair. Reading
+pair `i` of `q` as a complex number `zᵢ` and of `k` as `wᵢ`,
+
+```math
+\\langle R(m)q,\\; R(n)k \\rangle
+  = \\sum_i |z_i|\\,|w_i| \\, \\cos\\!\\big(g\\,\\theta_i + \\varphi_i\\big),
+\\qquad g = n-m,\\;\\; \\varphi_i = \\arg w_i - \\arg z_i
+```
+
+This is the clearest statement of what RoPE does. **Content chooses each
+channel's amplitude and phase; position only advances the argument.** The score
+is a filter bank over relative distance, and a head can tune itself to respond
+at a chosen gap by choosing the phases — something no additive scheme offers.
+
+Returns the three vectors, one entry per pair.
+"""
+function rope_channels(q::AbstractVector, k::AbstractVector; base::Real = 10_000.0)
+    length(q) == length(k) ||
+        throw(DimensionMismatch("q has $(length(q)) entries, k has $(length(k))"))
+    dim = length(q)
+    θ = sinusoidal_frequencies(dim; base = base)
+    amp   = similar(θ)
+    phase = similar(θ)
+    for (j, _) in enumerate(θ)
+        i = j - 1
+        z = complex(q[2i + 1], q[2i + 2])
+        w = complex(k[2i + 1], k[2i + 2])
+        amp[j]   = abs(z) * abs(w)
+        phase[j] = angle(w) - angle(z)
+    end
+    (amplitude = amp, phase = phase, frequency = θ)
+end
+
+"""
+    alibi_halflife(nheads) -> Vector
+
+How many positions it takes each ALiBi head to halve its attention:
+`ln 2 / mₕ`.
+
+The bias `-mₕ|i-j|` sits inside a softmax, so after exponentiating it is a
+**geometric discount**: attention is multiplied by `r^{|i-j|}` with
+`r = exp(-mₕ)`. ALiBi is therefore a recency prior with a per-head half-life,
+and because the slopes are geometric the half-lives are too — at 8 heads they
+run 1.4, 2.8, 5.5, 11.1, 22.2, 44.4, 88.7, 177.4 positions. The same
+octave-tiling idea as the sinusoidal clocks, applied to the attention edges
+instead of the vectors.
+"""
+alibi_halflife(nheads::Integer) = log(2) ./ alibi_slopes(nheads)
+
+"""
+    alibi_decay(nheads, len) -> Matrix (len × nheads)
+
+The multiplicative weight ALiBi applies at each distance, `exp(-mₕ d)` for
+`d = 0:len-1` — the same information as [`alibi_bias`](@ref), on the scale the
+softmax actually sees. Column `h` is one head's decay curve, falling from 1 to
+`exp(-mₕ(len-1))`.
+"""
+function alibi_decay(nheads::Integer, len::Integer)
+    slopes = alibi_slopes(nheads)
+    [exp(-slopes[h] * d) for d in 0:(len - 1), h in 1:nheads]
+end

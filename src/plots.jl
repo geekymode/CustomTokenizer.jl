@@ -10,7 +10,9 @@ before calling this function."""
 
 for f in (:plot_tables, :plot_update, :plot_loss, :plot_similarity_matrix,
           :plot_cooccurrence, :plot_embedding_map, :plot_evolution,
-          :plot_positional_encoding, :plot_position_decay)
+          :plot_positional_encoding, :plot_position_decay,
+          :plot_frequency_ladder, :plot_gap_kernel, :plot_rope_geometry,
+          :plot_alibi_kernel, :plot_bipartite_attention)
     @eval begin
         function $f(args...; kwargs...)
             error($_PLOT_HINT)
@@ -103,3 +105,58 @@ head, all against the gap between two positions.
 
 Requires a Makie backend.
 """ plot_position_decay
+
+@doc """
+    plot_frequency_ladder(; dim=64, base=10000.0, context=2048)
+
+The geometric ladder of wavelengths behind the sinusoidal and rotary schemes:
+one bar per coordinate pair, from a few positions to tens of thousands. Pairs
+whose wavelength is shorter than `context` have wrapped at least once within a
+window that long, and can no longer place a token on their own.
+
+Requires a Makie backend.
+""" plot_frequency_ladder
+
+@doc """
+    plot_gap_kernel(; dim=64, base=10000.0, len=2000)
+
+The exact sinusoidal similarity kernel `S(g) = Σᵢ cos(g θᵢ)` against the smooth
+logarithmic envelope, on a log axis. The point of the figure is the gap between
+the two: the kernel is a clean decay only for the first few positions, and
+oscillates well away from the envelope afterwards.
+
+Requires a Makie backend.
+""" plot_gap_kernel
+
+@doc """
+    plot_rope_geometry(; dim=64, base=10000.0, seed=1)
+
+Three views of the rotary scheme: one coordinate pair rotated to two different
+positions in the plane, the per-pair decomposition of a score into amplitude
+and phase from [`rope_channels`](@ref), and the resulting score against the gap.
+
+Requires a Makie backend.
+""" plot_rope_geometry
+
+@doc """
+    plot_alibi_kernel(; nheads=8, len=256)
+
+ALiBi on the scale the softmax sees: the multiplicative discount `exp(-mₕ d)`
+per head, with each head's half-life marked. The half-lives form a geometric
+ladder, which is how a handful of heads cover distances from a couple of tokens
+to a couple of hundred.
+
+Requires a Makie backend.
+""" plot_alibi_kernel
+
+@doc """
+    plot_bipartite_attention(; heads=(1, 6), nheads=8, len=10)
+
+Attention drawn as what it is: a weighted bipartite graph, queries along the
+top and keys along the bottom, one edge per pair. Edge opacity is the ALiBi
+discount `exp(-mₕ|i-j|)` for the chosen heads, so a steep head shows as a tight
+band along the diagonal and a shallow one as a broad fan. Only the causal half
+is drawn, since a token cannot attend to its future.
+
+Requires a Makie backend.
+""" plot_bipartite_attention

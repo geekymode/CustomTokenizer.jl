@@ -528,6 +528,111 @@ end
         @test decay[2] < decay[1]
         @test mean(decay[8:12]) < mean(decay[1:4])                    # falls away with distance
     end
+
+    @testset "the clocks behind both schemes" begin
+        θ = sinusoidal_frequencies(64)
+        @test length(θ) == 32
+        @test θ[1] ≈ 1.0                                              # the fastest pair
+        @test θ[end] ≈ 10_000.0^(-62 / 64)
+        @test issorted(θ; rev = true)                                 # geometric, descending
+        @test sinusoidal_wavelengths(64) ≈ 2π ./ θ
+        @test sinusoidal_frequencies(8; base = 100.0)[2] ≈ 100.0^(-1 / 4)
+        @test_throws ArgumentError sinusoidal_frequencies(7)
+
+        # a column is a point on a torus: same length at every position
+        P = sinusoidal_encoding(64, 200)
+        @test all(≈(sqrt(32)), [norm(P[:, p]) for p in 1:200])
+    end
+
+    @testset "the gap kernel is exactly Σ cos(g θ)" begin
+        d, n = 64, 120
+        P = sinusoidal_encoding(d, n)
+        S = sinusoidal_gap_score(d, 0:(n - 1))
+        @test S[1] ≈ d / 2                                            # S(0) = number of pairs
+        # the dot product of two columns depends on the gap alone — Toeplitz
+        @test all(dot(P[:, p], P[:, q]) ≈ S[abs(p - q) + 1] for p in 1:n, q in 1:n)
+
+        # and it is NOT a monotone decay: it turns back up early
+        @test S[7] > S[6]                                             # first rise, gap 5 -> 6
+        @test any(S[g + 1] > S[g] for g in 2:100)
+
+        # the log envelope tracks it loosely at d = 64, tightly at d = 1024
+        rel(dim) = (g = 10:1000;
+                    mean(abs.(sinusoidal_gap_score(dim, g) .- sinusoidal_gap_envelope(dim, g))) /
+                    (dim / 2))
+        @test rel(64) > 0.04
+        @test rel(1024) < 0.01
+        @test rel(1024) < rel(64)
+        @test sinusoidal_gap_envelope(64, [0])[1] == 32
+    end
+
+    @testset "the shift theorem" begin
+        d, k = 32, 7
+        P = sinusoidal_encoding(d, 60)
+        R = shift_operator(d, k)
+        @test size(R) == (d, d)
+        @test R' * R ≈ I                                              # a rotation
+        # the same R moves every position forward by k
+        @test all(R * P[:, p + 1] ≈ P[:, p + 1 + k] for p in 0:(60 - k - 1))
+        @test shift_operator(d, 0) ≈ I
+    end
+
+    @testset "RoPE is a representation of the integers" begin
+        d = 32
+        @test rotation_operator(d, 0) ≈ I
+        @test rotation_operator(d, 11)' * rotation_operator(d, 11) ≈ I
+        @test rotation_operator(d, 5) * rotation_operator(d, 9) ≈ rotation_operator(d, 14)
+        @test rotation_operator(d, 5)' ≈ rotation_operator(d, -5)
+        x = randn(Xoshiro(3), d)
+        @test rotation_operator(d, 17) * x ≈ rope(x, 17)
+
+        # hence the score depends only on the difference, even far out
+        q, k = randn(Xoshiro(4), d), randn(Xoshiro(5), d)
+        for (m, n) in ((7, 3), (100, 96), (2, 9), (5000, 4996))
+            @test dot(rope(q, m), rope(k, n)) ≈ dot(q, rope(k, n - m))
+        end
+    end
+
+    @testset "RoPE channels: content sets amplitude and phase" begin
+        d = 64
+        q, k = randn(Xoshiro(6), d), randn(Xoshiro(7), d)
+        ch = rope_channels(q, k)
+        @test length(ch.amplitude) == length(ch.phase) == length(ch.frequency) == 32
+        @test ch.frequency ≈ sinusoidal_frequencies(d)
+        @test all(ch.amplitude .>= 0)
+        # the score really is the sum of those cosines
+        for g in (0, 3, 40, 500)
+            @test dot(rope(q, 0), rope(k, g)) ≈
+                  sum(ch.amplitude .* cos.(g .* ch.frequency .+ ch.phase))
+        end
+        # scaling a vector scales every amplitude and leaves the phases alone
+        ch2 = rope_channels(2q, k)
+        @test ch2.amplitude ≈ 2 .* ch.amplitude
+        @test ch2.phase ≈ ch.phase
+        @test_throws DimensionMismatch rope_channels(q, k[1:8])
+    end
+
+    @testset "ALiBi is a geometric discount" begin
+        slopes = alibi_slopes(8)
+        half = alibi_halflife(8)
+        @test half ≈ log(2) ./ slopes
+        @test half[1] ≈ 1.3862943611198906                            # not 1
+        @test all(diff(half) .> 0)                                    # a ladder of ranges
+        @test half[end] / half[1] ≈ 2.0^7
+
+        D = alibi_decay(8, 64)
+        @test size(D) == (64, 8)
+        @test all(≈(1), D[1, :])
+        @test all(≈(0.5), [exp(-slopes[h] * half[h]) for h in 1:8])   # half-life is a half
+        # exponentiating the bias gives exactly r^(i-j)
+        B = alibi_bias(8, 6)
+        @test all(exp(B[i, j, h]) ≈ exp(-slopes[h])^(i - j)
+                  for h in 1:8 for i in 1:6 for j in 1:i)
+
+        # non-power-of-two head counts come back interleaved, not sorted
+        @test !issorted(alibi_slopes(12); rev = true)
+        @test length(alibi_slopes(12)) == 12
+    end
 end
 
 @testset "loading and saving vectors" begin
@@ -614,6 +719,12 @@ end
     @test plot_positional_encoding(sinusoidal_encoding(32, 40)) isa Figure
     @test plot_positional_encoding(sinusoidal_encoding(16, 20); colorbar = true) isa Figure
     @test plot_position_decay(; dim = 32, len = 24, nheads = 3) isa Figure
+    @test plot_frequency_ladder(; dim = 32, context = 512) isa Figure
+    @test plot_gap_kernel(; dim = 32, len = 300) isa Figure
+    @test plot_rope_geometry(; dim = 32) isa Figure
+    @test plot_alibi_kernel(; nheads = 4, len = 64) isa Figure
+    @test plot_alibi_kernel(; nheads = 1, len = 16) isa Figure          # no division by zero
+    @test plot_bipartite_attention(; heads = (1, 3), nheads = 4, len = 6) isa Figure
 
     # a figure really does render
     mktempdir() do dir

@@ -141,6 +141,20 @@ position_similarity
 rope_similarity
 ```
 
+### The clocks, and the algebra behind them
+
+```@docs
+sinusoidal_frequencies
+sinusoidal_wavelengths
+sinusoidal_gap_score
+sinusoidal_gap_envelope
+shift_operator
+rotation_operator
+rope_channels
+alibi_halflife
+alibi_decay
+```
+
 ## Analysis
 
 ```@docs
@@ -167,4 +181,9 @@ plot_embedding_map
 plot_evolution
 plot_positional_encoding
 plot_position_decay
+plot_frequency_ladder
+plot_gap_kernel
+plot_rope_geometry
+plot_alibi_kernel
+plot_bipartite_attention
 ```

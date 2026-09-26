@@ -4,9 +4,11 @@ using CustomTokenizer
 using CustomTokenizer: Model, UpdateInfo, TrainLog, Vocabulary, pca2,
                            similarity_matrix, column_norms, changed_columns,
                            sinusoidal_encoding, position_similarity, rope_similarity,
-                           alibi_slopes
+                           alibi_slopes, sinusoidal_frequencies, sinusoidal_wavelengths,
+                           sinusoidal_gap_score, sinusoidal_gap_envelope, rope_channels,
+                           alibi_halflife, alibi_decay, rope
 using Makie
-using LinearAlgebra, Printf
+using LinearAlgebra, Printf, Random, Statistics
 
 const ANIMAL = RGBf(0.106, 0.620, 0.467)
 const ROYAL  = RGBf(0.459, 0.439, 0.702)
@@ -241,6 +243,182 @@ function CustomTokenizer.plot_position_decay(; dim = 64, len = 64, nheads = 4, f
                label = @sprintf("slope %.3f", m))
     end
     axislegend(ax3; position = :lb, framevisible = false, labelsize = 10)
+    fig
+end
+
+function CustomTokenizer.plot_frequency_ladder(; dim = 64, base = 10_000.0,
+                                               context = 2048, figure = (;))
+    λ = sinusoidal_wavelengths(dim; base = base)
+    npairs = length(λ)
+    fig = Figure(; size = (1080, 400), figure...)
+
+    ax1 = Axis(fig[1, 1]; xlabel = "coordinate pair i", ylabel = "wavelength (positions)",
+               yscale = log10, title = "each pair turns at its own rate",
+               titlealign = :left)
+    wrapped = λ .< context
+    barplot!(ax1, 1:npairs, λ; color = [w ? CTX_EDGE : ANIMAL for w in wrapped])
+    hlines!(ax1, [context]; color = :black, linestyle = :dash, linewidth = 1.5)
+    text!(ax1, 1, context; text = "  context = $context", align = (:left, :bottom),
+          fontsize = 11)
+    text!(ax1, npairs, minimum(λ); text = "orange: wraps inside the context  ",
+          align = (:right, :bottom), fontsize = 10, color = CTX_EDGE)
+
+    # how many pairs can still be read unambiguously at a given gap
+    gaps = [1, 10, 100, 1000, 10_000]
+    θ = sinusoidal_frequencies(dim; base = base)
+    unwrapped = [count(t -> g * t < π, θ) for g in gaps]
+    ax2 = Axis(fig[1, 2]; xlabel = "gap between two tokens", ylabel = "pairs not yet wrapped",
+               xscale = log10, xticks = (gaps, string.(gaps)),
+               title = "how many clocks still read unambiguously", titlealign = :left)
+    barplot!(ax2, gaps, unwrapped; color = ROYAL, width = [0.6g for g in gaps])
+    for (g, u) in zip(gaps, unwrapped)
+        text!(ax2, g, u; text = "$u/$npairs", align = (:center, :bottom), fontsize = 11)
+    end
+    ylims!(ax2, 0, npairs * 1.15)
+    fig
+end
+
+function CustomTokenizer.plot_gap_kernel(; dim = 64, base = 10_000.0, len = 2000,
+                                         figure = (;))
+    gaps = 1:len
+    S = sinusoidal_gap_score(dim, gaps; base = base)
+    E = sinusoidal_gap_envelope(dim, gaps; base = base)
+    monotone = something(findfirst(g -> S[g + 1] > S[g], 1:(len - 1)), len)
+
+    fig = Figure(; size = (1080, 400), figure...)
+    ax1 = Axis(fig[1, 1]; xlabel = "gap", ylabel = "S(gap)",
+               title = "the first few positions: a clean decay", titlealign = :left)
+    small = 1:min(40, len)
+    lines!(ax1, small, S[small]; color = ANIMAL, linewidth = 2.5)
+    scatter!(ax1, small, S[small]; color = ANIMAL, markersize = 5)
+    vlines!(ax1, [monotone]; color = :black, linestyle = :dash, linewidth = 1.5)
+    text!(ax1, monotone, maximum(S[small]);
+          text = " monotone only to gap $monotone", align = (:left, :top), fontsize = 11)
+
+    ax2 = Axis(fig[1, 2]; xlabel = "gap (log scale)", ylabel = "S(gap)", xscale = log10,
+               title = "further out: oscillation, not decay", titlealign = :left)
+    lines!(ax2, gaps, S; color = ANIMAL, linewidth = 1.5, label = "exact  Σᵢ cos(g θᵢ)")
+    lines!(ax2, gaps, E; color = ROYAL, linewidth = 2.5, linestyle = :dash,
+           label = "log envelope")
+    hlines!(ax2, [0]; color = :black, linewidth = 0.8)
+    axislegend(ax2; position = :lb, framevisible = false, labelsize = 10)
+    fig
+end
+
+function CustomTokenizer.plot_rope_geometry(; dim = 64, base = 10_000.0, seed = 1,
+                                            figure = (;))
+    rng = Xoshiro(seed)
+    q, k = randn(rng, dim), randn(rng, dim)
+    fig = Figure(; size = (1120, 390), figure...)
+
+    # --- one pair, rotated to two positions: the angle between them is what survives
+    ax1 = Axis(fig[1, 1]; title = "one coordinate pair, in its plane", titlealign = :left,
+               aspect = DataAspect(), xlabel = "x₀", ylabel = "x₁")
+    θ0 = sinusoidal_frequencies(dim; base = base)[1]
+    z = [q[1], q[2]] ./ norm(q[1:2])
+    w = [k[1], k[2]] ./ norm(k[1:2])
+    rot(v, a) = [cos(a) * v[1] - sin(a) * v[2], sin(a) * v[1] + cos(a) * v[2]]
+    arc = [Point2f(cos(t), sin(t)) for t in range(0, 2π; length = 200)]
+    lines!(ax1, arc; color = (:black, 0.15))
+    for (m, col) in ((0, ANIMAL), (6, ROYAL))
+        zm, wm = rot(z, m * θ0), rot(w, m * θ0)
+        arrows2d!(ax1, [0.0, 0.0], [0.0, 0.0], [zm[1], wm[1]], [zm[2], wm[2]];
+                  color = col)
+        text!(ax1, zm[1], zm[2]; text = m == 0 ? " q at 0" : " q at 6", color = col,
+              fontsize = 11, align = (:left, :bottom))
+        text!(ax1, wm[1], wm[2]; text = m == 0 ? " k at 0" : " k at 6", color = col,
+              fontsize = 11, align = (:left, :bottom))
+    end
+    limits!(ax1, -1.35, 1.35, -1.35, 1.35)
+    text!(ax1, 0, -1.3; text = "both turn together: the angle between them never changes",
+          fontsize = 10, align = (:center, :bottom), color = NEUTRAL)
+
+    # --- the score as a bank of cosines, one per pair
+    ch = rope_channels(q, k; base = base)
+    ax2 = Axis(fig[1, 2]; xlabel = "coordinate pair i", ylabel = "amplitude |zᵢ||wᵢ|",
+               title = "content sets amplitude and phase", titlealign = :left)
+    barplot!(ax2, 1:length(ch.amplitude), ch.amplitude; color = ANIMAL)
+    ax2b = Axis(fig[1, 2]; yaxisposition = :right, ylabel = "phase φᵢ (rad)",
+                yticklabelcolor = CTX_EDGE, ylabelcolor = CTX_EDGE)
+    hidespines!(ax2b); hidexdecorations!(ax2b)
+    scatter!(ax2b, 1:length(ch.phase), ch.phase; color = CTX_EDGE, markersize = 6)
+    linkxaxes!(ax2, ax2b)
+
+    # --- the resulting score against the gap
+    ax3 = Axis(fig[1, 3]; xlabel = "gap n − m", ylabel = "score (normalised)",
+               title = "decay is an average, not a promise", titlealign = :left)
+    gaps = 0:255
+    one = [dot(rope(q, 0; base = base), rope(k, g; base = base)) for g in gaps] /
+          (norm(q) * norm(k))
+    lines!(ax3, gaps, one; color = (ROYAL, 0.55), linewidth = 1.2,
+           label = "one random q, k")
+    vs = [randn(Xoshiro(1000 + j), dim) for j in 1:128]
+    same = [mean(dot(rope(v, 0; base = base), rope(v, g; base = base)) / dot(v, v)
+                 for v in vs) for g in gaps]
+    lines!(ax3, gaps, same; color = ANIMAL, linewidth = 2.5,
+           label = "a token against itself, averaged")
+    hlines!(ax3, [0]; color = :black, linewidth = 0.8)
+    axislegend(ax3; position = :rt, framevisible = false, labelsize = 9)
+    fig
+end
+
+function CustomTokenizer.plot_alibi_kernel(; nheads = 8, len = 256, figure = (;))
+    D = alibi_decay(nheads, len)
+    half = alibi_halflife(nheads)
+    slopes = alibi_slopes(nheads)
+    fig = Figure(; size = (1080, 400), figure...)
+
+    ax1 = Axis(fig[1, 1]; xlabel = "distance |i − j|", ylabel = "attention multiplier",
+               title = "after the softmax, the bias is a geometric discount",
+               titlealign = :left)
+    headcolor(h) = Makie.get(Makie.cgrad(:viridis), nheads == 1 ? 0.5 : (h - 1) / (nheads - 1))
+    for h in 1:nheads
+        lines!(ax1, 0:(len - 1), D[:, h]; linewidth = 2, color = headcolor(h),
+               label = @sprintf("m = %.4f  (half-life %.0f)", slopes[h], half[h]))
+    end
+    hlines!(ax1, [0.5]; color = :black, linestyle = :dash, linewidth = 1)
+    text!(ax1, len, 0.5; text = "half  ", align = (:right, :bottom), fontsize = 10)
+    xlims!(ax1, 0, min(len, 60))
+    axislegend(ax1; position = :rt, framevisible = false, labelsize = 9)
+
+    ax2 = Axis(fig[1, 2]; xlabel = "head", ylabel = "half-life (positions)", yscale = log10,
+               xticks = 1:nheads, title = "a geometric ladder of ranges", titlealign = :left)
+    barplot!(ax2, 1:nheads, half; color = [headcolor(h) for h in 1:nheads])
+    for h in 1:nheads
+        text!(ax2, h, half[h];
+              text = half[h] < 10 ? @sprintf("%.1f", half[h]) : @sprintf("%.0f", half[h]),
+              align = (:center, :bottom), fontsize = 10)
+    end
+    fig
+end
+
+function CustomTokenizer.plot_bipartite_attention(; heads = (1, 6), nheads = 8, len = 10,
+                                                  figure = (;))
+    slopes = alibi_slopes(nheads)
+    half = alibi_halflife(nheads)
+    fig = Figure(; size = (1080, 400), figure...)
+    for (panel, h) in enumerate(heads)
+        m = slopes[h]
+        ax = Axis(fig[1, panel];
+                  title = @sprintf("head %d:  m = %.4f,  half-life %.1f positions",
+                                   h, m, half[h]),
+                  titlealign = :left)
+        hidedecorations!(ax); hidespines!(ax)
+        for i in 1:len, j in 1:i                      # causal: key j ≤ query i
+            w = exp(-m * (i - j))
+            lines!(ax, [i, j], [1.0, 0.0];
+                   color = (ROYAL, max(w, 0.02)), linewidth = 0.5 + 3.5w)
+        end
+        scatter!(ax, 1:len, fill(1.0, len); color = ANIMAL, markersize = 13)
+        scatter!(ax, 1:len, fill(0.0, len); color = CTX_EDGE, markersize = 13)
+        text!(ax, 0.4, 1.0; text = "queries ", align = (:right, :center), fontsize = 11)
+        text!(ax, 0.4, 0.0; text = "keys ", align = (:right, :center), fontsize = 11)
+        for i in 1:len
+            text!(ax, i, 1.12; text = string(i), align = (:center, :center), fontsize = 9)
+            text!(ax, i, -0.12; text = string(i), align = (:center, :center), fontsize = 9)
+        end
+        limits!(ax, -1.6, len + 0.6, -0.35, 1.35)
+    end
     fig
 end
 

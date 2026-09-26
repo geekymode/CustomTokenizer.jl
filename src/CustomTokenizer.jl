@@ -67,7 +67,10 @@ export TrainStepper, step!, run_updates!, finish_epoch!, reset!, last_update, pr
 
 # positional encoding
 export sinusoidal_encoding, learned_positions, rope, alibi_slopes, alibi_bias,
-       position_similarity, rope_similarity
+       position_similarity, rope_similarity, sinusoidal_frequencies,
+       sinusoidal_wavelengths, sinusoidal_gap_score, sinusoidal_gap_envelope,
+       shift_operator, rotation_operator, rope_channels, alibi_halflife,
+       alibi_decay
 
 # analysis
 export target_probability, target_matrix, calibration, similarity_matrix, pca2,
@@ -76,7 +79,9 @@ export target_probability, target_matrix, calibration, similarity_matrix, pca2,
 # plotting (implemented in the Makie extension)
 export plot_tables, plot_update, plot_loss, plot_similarity_matrix,
        plot_cooccurrence, plot_embedding_map, plot_evolution,
-       plot_positional_encoding, plot_position_decay
+       plot_positional_encoding, plot_position_decay, plot_frequency_ladder,
+       plot_gap_kernel, plot_rope_geometry, plot_alibi_kernel,
+       plot_bipartite_attention
 
 include("vocab.jl")
 include("corpus.jl")
